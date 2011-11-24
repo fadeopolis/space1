@@ -19,7 +19,6 @@ space1-light/bin/
 space1-gui/bin/
 
 # ignore libraries
-lib/
 space1-common/lib/
 space1-dark/lib/
 space1-light/lib/
