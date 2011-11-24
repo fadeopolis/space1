@@ -1,0 +1,27 @@
+# ignore eclipse project files
+space1-common/.project
+space1-common/.classpath
+space1-common/.settings/
+space1-dark/.project
+space1-dark/.classpath
+space1-dark/.settings/
+space1-light/.project
+space1-light/.classpath
+space1-light/.settings/
+space1-gui/.project
+space1-gui/.classpath
+space1-gui/.settings/
+
+# ignore binaries
+space1-common/bin/
+space1-dark/bin/
+space1-light/bin/
+space1-gui/bin/
+
+# ignore libraries
+lib/
+space1-common/lib/
+space1-dark/lib/
+space1-light/lib/
+space1-gui/lib/
+

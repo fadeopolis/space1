@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<ivy-module version="2.0">
+	<info organisation="tu.space" module="space1-light"/>
+	<dependencies>
+		<!--<dependency org="commons-lang" name="commons-lang" rev="2.0"/>-->
+	</dependencies>
+</ivy-module>
