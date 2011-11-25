@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>tu.space</groupId>
+	<artifactId>space1-light</artifactId>
+	<packaging>jar</packaging>
+	<version>1.0-SNAPSHOT</version>
+
+	<name>Space based solution</name>
+
+	<repositories>
+		<repository>
+			<id>mozartspaces</id>
+			<url>http://www.mozartspaces.org/maven-snapshots</url>
+		</repository>
+	</repositories>
+
+	<dependencies>
+		<!-- TU.SPACE -->
+		<dependency>
+			<groupId>tu.space</groupId>
+			<artifactId>space1-common</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>tu.space</groupId>
+			<artifactId>space1-gui</artifactId>
+			<version>1.0-SNAPSHOT</version>
+		</dependency>
+		<!-- MOZART SPACES -->
+		<dependency>
+			<groupId>org.mozartspaces</groupId>
+			<artifactId>mozartspaces-runtime</artifactId>
+			<version>2.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mozartspaces</groupId>
+			<artifactId>mozartspaces-notifications</artifactId>
+			<version>2.1-SNAPSHOT</version>
+		</dependency>
+	</dependencies>
+</project>
