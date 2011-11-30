@@ -1,14 +1,50 @@
 Author: 
-Gruber Fabian, .......
+Gruber Fabian, 0726905
 Raunig Stefan, 0726374
 
 
 Tech.:
 
-dependencies: ivy
+buildtool: maven
 spacebased: mozartspace
 message oriented: jms
 
 Commands: 
 
 ...
+
+
+Verwendete Pattern: 
+1.1 Space Based: Pattern Producer - Consumer
+
+1.2 Message oriented: Pattern Producer - Consumer
+
+
+3.1: Alternative: RMI, Message Parsing, Sockets
+
+Vorteile RMI: Location Transparent direkte Verwendung von Objekten, Registry Service Zentralle zur Verteitlung von Objekten, Wenig messeges nur lookup zur Registry und binding zu den Objekten
+Nachteile RMI: Stärkere Koppelung, Marshalling von Objekten
+
+Evaluation: Wird nicht verwendet weil synchrone Bindung an die Objekte zu starr für die Aufgabe ist. 
+
+Vorteile Message Parsing: Entkoppelung, Platformunabhängig, Asynchrone Kommunikation
+Nachteile Message Parsing: Marshalling von Nachrichten, Typsicherheit nicht gegeben
+
+Evaluation: Wir verwenden MP da asynchrone Kommunikation für den Ablauf zweckdienlich erscheint. 
+
+Vorteile Sockets: Effizient, Flexibel
+Nachteile Sockets: Fehlen einer Middleware, Umständlich und Fehleranfällig durch Programmieraufwand
+
+Evaluation: Wird nicht verwendet da es zu umständlich ist, zuviel Arbeit und wegen dem fehlen einer Middleware.
+
+3.2: Spaces: Mozart Spaces, Blitz, Giga Spaces
+
+Vorteile Mozart Spaces: FIFO queue buildin, 
+Nachteile Mozart Spaces: 
+
+Vorteile Blitz:
+Nachteile Blitz:
+
+Vorteile Giga Spaces:
+Nachteile GIga Spaces: Kommerzielles Produkt
+

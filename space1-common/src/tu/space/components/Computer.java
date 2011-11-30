@@ -2,52 +2,56 @@ package tu.space.components;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
 import tu.space.utils.SpaceException;
 
+/**
+ * A computer with core components: cpu, mainboard and 1,2 or 4 ram and optional a gpu
+ * 
+ * @author raunig stefan
+ */
 public class Computer implements Serializable {
 
-	public String workerId;
+	private static final long serialVersionUID = 7215705354327276440L;
+
+	public final String workerId;
 	
 	public final Component cpu;
 	public final Component gpu;
 	public final Component mainboard;
-	public final ArrayList<Component> ramModules = new ArrayList<Component>();
+	public final List<Component> ramModules = new ArrayList<Component>();
 	
-	public boolean complete = false;
+	public final boolean error;
 	
-	public Computer(Component cpu, Component mainboard, Component gpu, ArrayList<Component> ramModules) throws SpaceException{
-		if(ramModules.size() > 4){
-			throw new SpaceException("Not more then 4 ram modules allowed!");
+	public Computer(String workerId, Cpu cpu, Mainboard mainboard, Gpu gpu, List<RamModule> ramModules) throws SpaceException{
+		//core components cpu and mainboard and ram needed
+		if(cpu == null || mainboard == null){
+			throw new SpaceException("Core component missing!");
+		}
+		//the amount of ram must be 1,2 or 4
+		if(ramModules.size() < 1 || ramModules.size() == 3 || ramModules.size() > 4){
+			throw new SpaceException("Not valide amount of ram components!");
 		}
 		
+		this.workerId = workerId;
 		this.cpu = cpu;
 		this.gpu = gpu;
 		this.mainboard = mainboard;
-		this.ramModules.addAll(ramModules);	
-		//if core components are set the PC is complete
-		if(cpu != null && mainboard != null && !(ramModules.isEmpty())){
-			complete = true;
-		}
-	}
-	
-	/**
-	 * precondition only 4 slots for ram available,
-	 * if > 4 no more allowed!
-	 * @param ram
-	 * @throws SpaceException 
-	 */
-	
-	public void addRamModule(Component ram) throws SpaceException{
-		if(!(ram instanceof RamModule)){
-			throw new SpaceException("This component is not a ram module");
-		}
+		this.ramModules.addAll(ramModules);
 		
-		if(ramModules.size() <= 4){
-			ramModules.add(ram);
+		//check if a component has an error thus the computer has an error
+		if(cpu.getError() || gpu.error || mainboard.getError()) {
+			error = true;
+			return;
 		} else {
-			//TODO log
-			throw new SpaceException("Not more then 4 ram modules allowed!");
+			for(RamModule ram: ramModules){
+				if(ram.getError()) {
+					error = true;
+					return;
+				}
+			}
+			error = false;
 		}
 	}
 }
