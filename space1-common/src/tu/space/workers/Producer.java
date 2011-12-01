@@ -8,6 +8,7 @@ import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
 import tu.space.utils.EnumComponent;
+import tu.space.utils.SpaceException;
 
 /**
  *
@@ -15,7 +16,7 @@ import tu.space.utils.EnumComponent;
  *
  * @author raunig stefan
 **/
-public class Producer implements Runnable {
+public abstract class Producer implements Runnable {
 	
 	private Thread thread;
 	
@@ -53,7 +54,7 @@ public class Producer implements Runnable {
 			}
 			
 			//Component to be produced
-			Component component;
+			Component component=null;
 			
 			switch(enumValue){
 				case CPU :
@@ -72,13 +73,15 @@ public class Producer implements Runnable {
 					//not a component
 					thread.interrupt();
 				}
-			
-			//make Component available in space
-			//TODO
-			component = null;
-			//set notifications
-			//TODO
+			//this method will be overriden by subclasses
+				publish(component);
 		}
+	}
+	
+	/**
+	 * To be overriden by space version or message version, to add functionallity
+	 */
+	public void publish(Component component) {
 	}
 	
 	

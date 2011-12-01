@@ -7,6 +7,6 @@ package tu.space.workers;
  *
  * @author raunig stefan
 **/
-public class Manufacturer {
+public abstract class Manufacturer {
 
 }

@@ -1,0 +1,1 @@
+java -cp ../lib/mozartspaces-dist-2.1-SNAPSHOT-all-with-dependencies.jar;mozartspaces-examples-pco-2.1-SNAPSHOT.jar -Dmozartspaces.configurationFile=mozartspaces-client.xml org.mozartspaces.examples.pco.Observer xvsm://localhost:4242

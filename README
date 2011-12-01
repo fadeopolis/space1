@@ -11,7 +11,10 @@ message oriented: jms
 
 Commands: 
 
-...
+START: standalone server with property file: from /space1/space1-light/res
+
+java –cp mozartspaces-dist-2.1-SNAPSHOT-r11048-all-with-dependencies.jar -Dmozartspaces.configurationFile=mozartspaces.xml org.mozartspaces.core.Server
+
 
 
 Verwendete Pattern: 

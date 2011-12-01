@@ -1,0 +1,1 @@
+java -cp ../lib/mozartspaces-dist-2.1-SNAPSHOT-all-with-dependencies.jar org.mozartspaces.core.Server 4242
