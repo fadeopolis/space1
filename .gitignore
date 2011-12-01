@@ -13,6 +13,11 @@ space1-gui/.classpath
 space1-gui/.settings/
 
 # ignore binaries
+space1-common/bin/
+space1-dark/bin/
+space1-light/bin/
+space1-gui/bin/
+
 space1-common/target/
 space1-dark/target/
 space1-light/target/
