@@ -13,6 +13,16 @@
 
 	<name>Non-space based solution</name>
 
+	<parent>
+		<groupId>tu.space</groupId>
+		<artifactId>space1</artifactId>
+		<version>1.0-SNAPSHOT</version>
+	</parent>
+	
+	<properties>
+		<activeMQ.version>5.5.1</activeMQ.version>
+	</properties>
+
 	<dependencies>
 		<!-- TU.SPACE -->
 		<dependency>
@@ -29,7 +39,12 @@
 		<dependency>
 			<groupId>org.apache.activemq</groupId>
 			<artifactId>activemq-core</artifactId>
-			<version>5.4.3</version>
+			<version>${activeMQ.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.5.11</version>
 		</dependency>
 	</dependencies>
 	

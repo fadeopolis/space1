@@ -23,3 +23,6 @@ space1-dark/target/
 space1-light/target/
 space1-gui/target/
 
+# ignore ActiveMQ data
+space1-dark/activemq-data/
+

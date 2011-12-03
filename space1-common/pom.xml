@@ -13,7 +13,19 @@
 
 	<name>Space based common stuff</name>
 
+	<parent>
+		<groupId>tu.space</groupId>
+		<artifactId>space1</artifactId>
+		<version>1.0-SNAPSHOT</version>
+	</parent>
+
 	<dependencies>
+		<!-- FOR GENERATING UUIDS -->
+		<dependency>
+    		<groupId>com.fasterxml.uuid</groupId>
+    		<artifactId>java-uuid-generator</artifactId>
+    		<version>3.1.3</version>
+		</dependency>
 	</dependencies>
 	
 	<build>
