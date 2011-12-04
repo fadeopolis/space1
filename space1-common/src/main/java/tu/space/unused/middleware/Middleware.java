@@ -1,5 +1,6 @@
-package tu.space.middleware;
+package tu.space.unused.middleware;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 import tu.space.components.Component;
@@ -30,6 +31,8 @@ public interface Middleware {
 	Category<Computer>  testedComputers();
 	Category<Computer>  storage();
 	Category<Computer>  trash();
+	
+	Iterable<Category<Serializable>> allCategories();
 
 	void send( Component c );
 	

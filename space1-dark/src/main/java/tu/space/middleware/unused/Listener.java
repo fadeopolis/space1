@@ -1,4 +1,4 @@
-package tu.space.middleware;
+package tu.space.middleware.unused;
 
 public interface Listener<E> {
 	void handle( E e );

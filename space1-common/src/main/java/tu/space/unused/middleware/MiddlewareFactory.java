@@ -1,4 +1,4 @@
-package tu.space.middleware;
+package tu.space.unused.middleware;
 
 public interface MiddlewareFactory {
 	Middleware make();

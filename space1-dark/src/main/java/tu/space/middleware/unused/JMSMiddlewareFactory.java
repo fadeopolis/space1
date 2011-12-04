@@ -1,4 +1,4 @@
-package tu.space.middleware;
+package tu.space.middleware.unused;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
@@ -18,7 +18,9 @@ public class JMSMiddlewareFactory {
 	public JMSMiddleware make() {		
 		try {
 			Connection c = factory.createConnection();
-			Session    s = c.createSession( true, 0 );
+			Session    s = c.createSession( true, Session.SESSION_TRANSACTED );
+			
+			c.start();
 			
 			return new JMSMiddleware( c, s );
 		} catch ( JMSException e ) {

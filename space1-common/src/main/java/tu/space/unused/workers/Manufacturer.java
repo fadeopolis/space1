@@ -1,4 +1,4 @@
-package tu.space.workers;
+package tu.space.unused.workers;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -16,8 +16,8 @@ import tu.space.components.Cpu;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
-import tu.space.middleware.Category;
-import tu.space.middleware.Middleware;
+import tu.space.unused.middleware.Category;
+import tu.space.unused.middleware.Middleware;
 import tu.space.utils.Logger;
 import tu.space.utils.SpaceException;
 
@@ -29,8 +29,8 @@ public class Manufacturer extends Worker {
 	}
 
 	protected void doRun() {		
-		new WorkerThread().start();
 		middleware.start();
+		new WorkerThread().start();
 		
 		waitForNewLine();
 	}

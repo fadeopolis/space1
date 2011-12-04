@@ -8,8 +8,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import tu.space.utils.SpaceException;
-
 public final class Computer implements Serializable {
 	public enum TestStatus {
 		YES, NO, UNTESTED;
@@ -51,10 +49,6 @@ public final class Computer implements Serializable {
 		this.completenessTesterId = completenessTesterId;
 		this.logisticianId        = logisticianId;
 
-		if( ram.size() != 1 || ram.size() != 2 || ram.size() != 4 ){
-			throw new SpaceException("Computer must have 1,2 or 4 sticks of RAM, not " + ram.size());
-		}
-		
 		this.id         = id;
 		this.cpu        = cpu;
 		this.gpu        = gpu;
@@ -121,5 +115,105 @@ public final class Computer implements Serializable {
 		complete &= ramModules.size() == 1 || ramModules.size() == 2 || ramModules.size() == 4;
 		
 		return complete;
+	}
+	
+	@Override
+	public String toString() {
+		return "Computer [id=" + id + ", manufacturerId=" + manufacturerId
+				+ ", defectTesterId=" + defectTesterId
+				+ ", completenessTesterId=" + completenessTesterId
+				+ ", logisticianId=" + logisticianId + ", cpu=" + cpu
+				+ ", gpu=" + gpu + ", mainboard=" + mainboard + ", ramModules="
+				+ ramModules + ", defect=" + defect + ", complete=" + complete
+				+ ", finished=" + finished + "]";
+	}
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((complete == null) ? 0 : complete.hashCode());
+		result = prime
+				* result
+				+ ((completenessTesterId == null) ? 0 : completenessTesterId
+						.hashCode());
+		result = prime * result + ((cpu == null) ? 0 : cpu.hashCode());
+		result = prime * result + ((defect == null) ? 0 : defect.hashCode());
+		result = prime * result
+				+ ((defectTesterId == null) ? 0 : defectTesterId.hashCode());
+		result = prime * result + (finished ? 1231 : 1237);
+		result = prime * result + ((gpu == null) ? 0 : gpu.hashCode());
+		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result
+				+ ((logisticianId == null) ? 0 : logisticianId.hashCode());
+		result = prime * result
+				+ ((mainboard == null) ? 0 : mainboard.hashCode());
+		result = prime * result
+				+ ((manufacturerId == null) ? 0 : manufacturerId.hashCode());
+		result = prime * result
+				+ ((ramModules == null) ? 0 : ramModules.hashCode());
+		return result;
+	}
+	@Override
+	public boolean equals( Object obj ) {
+		if ( this == obj )
+			return true;
+		if ( obj == null )
+			return false;
+		if ( getClass() != obj.getClass() )
+			return false;
+		Computer other = (Computer) obj;
+		if ( complete != other.complete )
+			return false;
+		if ( completenessTesterId == null ) {
+			if ( other.completenessTesterId != null )
+				return false;
+		} else if ( !completenessTesterId.equals( other.completenessTesterId ) )
+			return false;
+		if ( cpu == null ) {
+			if ( other.cpu != null )
+				return false;
+		} else if ( !cpu.equals( other.cpu ) )
+			return false;
+		if ( defect != other.defect )
+			return false;
+		if ( defectTesterId == null ) {
+			if ( other.defectTesterId != null )
+				return false;
+		} else if ( !defectTesterId.equals( other.defectTesterId ) )
+			return false;
+		if ( finished != other.finished )
+			return false;
+		if ( gpu == null ) {
+			if ( other.gpu != null )
+				return false;
+		} else if ( !gpu.equals( other.gpu ) )
+			return false;
+		if ( id == null ) {
+			if ( other.id != null )
+				return false;
+		} else if ( !id.equals( other.id ) )
+			return false;
+		if ( logisticianId == null ) {
+			if ( other.logisticianId != null )
+				return false;
+		} else if ( !logisticianId.equals( other.logisticianId ) )
+			return false;
+		if ( mainboard == null ) {
+			if ( other.mainboard != null )
+				return false;
+		} else if ( !mainboard.equals( other.mainboard ) )
+			return false;
+		if ( manufacturerId == null ) {
+			if ( other.manufacturerId != null )
+				return false;
+		} else if ( !manufacturerId.equals( other.manufacturerId ) )
+			return false;
+		if ( ramModules == null ) {
+			if ( other.ramModules != null )
+				return false;
+		} else if ( !ramModules.equals( other.ramModules ) )
+			return false;
+		return true;
 	}
 }

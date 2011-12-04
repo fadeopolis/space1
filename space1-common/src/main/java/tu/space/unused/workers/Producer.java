@@ -1,10 +1,10 @@
-package tu.space.workers;
+package tu.space.unused.workers;
 
 import java.util.Random;
 import java.util.UUID;
 
 import tu.space.components.Component;
-import tu.space.middleware.Middleware;
+import tu.space.unused.middleware.Middleware;
 import tu.space.utils.Util;
 
 public class Producer<C extends Component> extends Worker {

@@ -1,8 +1,8 @@
-package tu.space.workers;
+package tu.space.unused.workers;
 
 import tu.space.components.Computer;
-import tu.space.middleware.Listener;
-import tu.space.middleware.Middleware;
+import tu.space.unused.middleware.Listener;
+import tu.space.unused.middleware.Middleware;
 
 
 /**

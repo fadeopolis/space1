@@ -1,4 +1,4 @@
-package tu.space.middleware;
+package tu.space.middleware.unused;
 
 import java.io.Serializable;
 import java.util.Enumeration;
@@ -16,6 +16,8 @@ import javax.jms.Topic;
 
 import tu.space.components.Computer;
 import tu.space.components.Computer.TestStatus;
+import tu.space.unused.middleware.Category;
+import tu.space.unused.middleware.Listener;
 import tu.space.utils.SpaceException;
 import tu.space.utils.Util;
 
@@ -60,6 +62,14 @@ public class JMSCategory<E extends Serializable> implements Category<E> {
 		}
 	}
 
+	public void setListener( MessageListener jms ) {
+		try {
+			queueIn.setMessageListener( jms );
+		} catch ( JMSException e ) {
+			throw new SpaceException( e );
+		}
+	}
+	
 	public void setNonConsumingListener( Listener<E> l ) {
 		try {
 			topicIn.setMessageListener( new MessageListenerAdapter<E>( l ) );
@@ -91,14 +101,18 @@ public class JMSCategory<E extends Serializable> implements Category<E> {
 		}
 	}
 
-	JMSCategory( String name, Session session, MessageSelector... selectors ) {
+	public String name() {
+		return name;
+	}
+	
+	JMSCategory( String name, String resourceName, Session session, MessageSelector... selectors ) {
 		try {
 			this.name        = name;
 			this.selectorStr = Util.join( " AND ", selectors );
 			this.session     = session;
 			
-			this.queue = session.createQueue( name + ".queue" );
-			this.topic = session.createTopic( name + ".topic" );
+			this.queue = session.createQueue( resourceName );
+			this.topic = session.createTopic( resourceName );
 
 			this.queueOut = session.createProducer( queue );
 			this.topicOut = session.createProducer( topic );
@@ -126,9 +140,9 @@ public class JMSCategory<E extends Serializable> implements Category<E> {
 		if ( s instanceof Computer ) {
 			Computer c = (Computer) s;
 			
-			msg.setBooleanProperty( "tested_for_defect",       c.defect   != TestStatus.UNTESTED );
-			msg.setBooleanProperty( "tested_for_completeness", c.complete != TestStatus.UNTESTED );
-			msg.setBooleanProperty( "finished",                c.finished );
+			msg.setBooleanProperty( JMSMiddleware.TEST_FOR_DEFECT.key,       c.defect   != TestStatus.UNTESTED );
+			msg.setBooleanProperty( JMSMiddleware.TEST_FOR_COMPLETENESS.key, c.complete != TestStatus.UNTESTED );
+			msg.setBooleanProperty( JMSMiddleware.FINISHED.key,              c.finished );
 		}
 		
 		return msg;

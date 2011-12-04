@@ -1,4 +1,4 @@
-package tu.space.middleware;
+package tu.space.unused.middleware;
 
 import java.io.Serializable;
 
@@ -12,4 +12,6 @@ public interface Category<E extends Serializable> {
 	E receive();
 	
 	void send( E e );
+	
+	String name();
 }

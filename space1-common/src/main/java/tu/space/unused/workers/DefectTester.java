@@ -1,9 +1,9 @@
-package tu.space.workers;
+package tu.space.unused.workers;
 
 import tu.space.components.Computer;
 import tu.space.components.Computer.TestStatus;
-import tu.space.middleware.Listener;
-import tu.space.middleware.Middleware;
+import tu.space.unused.middleware.Listener;
+import tu.space.unused.middleware.Middleware;
 
 /**
  *
@@ -25,7 +25,7 @@ public class DefectTester extends Worker {
 				middleware.allComputers().send( c.tagAsTestedForDefect( id, status ) );
 				middleware.commit();
 				
-				LOG.info("%s tested a computer", this);
+				LOG.info("%s tested a computer", DefectTester.this);
 			}
 		});
 		middleware.start();

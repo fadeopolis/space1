@@ -1,4 +1,4 @@
-package tu.space.middleware;
+package tu.space.middleware.unused;
 
 public final class MessageSelector {
 	public final String  key;

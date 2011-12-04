@@ -1,5 +1,8 @@
-package tu.space.middleware;
+package tu.space.middleware.unused;
 
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import javax.jms.Connection;
@@ -12,6 +15,8 @@ import tu.space.components.Cpu;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
+import tu.space.unused.middleware.Category;
+import tu.space.unused.middleware.Middleware;
 import tu.space.utils.SpaceException;
 import tu.space.utils.UUIDGenerator;
 
@@ -51,6 +56,18 @@ public class JMSMiddleware implements Middleware {
 	public JMSCategory<Computer>  storage()                           { return storage;                          }
 	public JMSCategory<Computer>  trash()                             { return trash;                            }
 	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	public Iterable<Category<Serializable>> allCategories() {
+		List l = Arrays.asList(
+			cpus(), gpus(), mainboards(), ramModules(), 
+			allComputers(), 
+//			computersUntestedForDefect(), computersUntestedForCompleteness(), testedComputers(), 
+			storage(), trash()
+		);
+		
+		return l;
+	}
+	
 	public void send( Component c ) {
 		     if ( c instanceof Cpu )       cpus.send( (Cpu) c );
 		else if ( c instanceof Gpu )       gpus.send( (Gpu) c );
@@ -78,21 +95,21 @@ public class JMSMiddleware implements Middleware {
 		this.connection = conn;
 		this.session    = session;
 		
-		this.cpus                             = new JMSCategory<Cpu>( "cpus", session );
-		this.gpus                             = new JMSCategory<Gpu>( "gpus", session );
-		this.mainboards                       = new JMSCategory<Mainboard>( "mainboards", session );
-		this.ramModules                       = new JMSCategory<RamModule>( "ramModules", session );
-		this.allComputers                     = new JMSCategory<Computer>( "computers", session );
-		this.computersUntestedForDefect       = new JMSCategory<Computer>( "computers", session, TEST_FOR_DEFECT );
-		this.computersUntestedForCompleteness = new JMSCategory<Computer>( "computers", session, TEST_FOR_COMPLETENESS );
-		this.testedComputers                  = new JMSCategory<Computer>( "computers", session, TEST_FOR_DEFECT, TEST_FOR_COMPLETENESS );
-		this.storage                          = new JMSCategory<Computer>( "storage", session, FINISHED );
-		this.trash                            = new JMSCategory<Computer>( "trash", session );
+		this.cpus                             = new JMSCategory<Cpu>( "CPUs", "cpu", session );
+		this.gpus                             = new JMSCategory<Gpu>( "GPUs", "gpu", session );
+		this.mainboards                       = new JMSCategory<Mainboard>( "Mainboards", "mainboard", session );
+		this.ramModules                       = new JMSCategory<RamModule>( "RAM", "ram", session );
+		this.allComputers                     = new JMSCategory<Computer>( "All computers", "computer", session );
+		this.computersUntestedForDefect       = new JMSCategory<Computer>( "untested-for-defect", "computer", session, TEST_FOR_DEFECT );
+		this.computersUntestedForCompleteness = new JMSCategory<Computer>( "untested-for-completeness", "computer", session, TEST_FOR_COMPLETENESS );
+		this.testedComputers                  = new JMSCategory<Computer>( "tested-computers", "computer", session, TEST_FOR_DEFECT, TEST_FOR_COMPLETENESS );
+		this.storage                          = new JMSCategory<Computer>( "Storage", "storage", session, FINISHED );
+		this.trash                            = new JMSCategory<Computer>( "Trash", "trash", session );
 	}
 	
-	private final static MessageSelector TEST_FOR_DEFECT       = new MessageSelector( "tested_for_defect", false );
-	private final static MessageSelector TEST_FOR_COMPLETENESS = new MessageSelector( "tested_for_defect", false );
-	private final static MessageSelector FINISHED              = new MessageSelector( "finished",          true  );
+	final static MessageSelector TEST_FOR_DEFECT       = new MessageSelector( "tested_for_defect",       false );
+	final static MessageSelector TEST_FOR_COMPLETENESS = new MessageSelector( "tested_for_completeness", false );
+	final static MessageSelector FINISHED              = new MessageSelector( "finished",                true  );
 	
 	private final Connection connection;
 	private final Session    session;
