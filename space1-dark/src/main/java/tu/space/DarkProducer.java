@@ -9,10 +9,11 @@ import javax.jms.Session;
 
 import tu.space.components.Component;
 import tu.space.utils.Logger;
+import tu.space.utils.SpaceException;
 import tu.space.utils.UUIDGenerator;
 import tu.space.utils.Util;
 
-public final class DarkProducer {
+public final class DarkProducer implements Runnable {
 	public static final int MAX_SLEEP_TIME = 3000;
 	public static final String USAGE = 
 			"usage: producer ID TYPE QUOTA ERROR_RATE\n"      +
@@ -41,10 +42,11 @@ public final class DarkProducer {
 		
 		Logger.configure();
 
-		new DarkProducer( id, quota, errorRate, factory );
+		new DarkProducer( id, quota, errorRate, factory ).run();
 	}	
 	
-	private <C extends Component> DarkProducer( String id, int quota, double errorRate, Component.Factory<C> f ) throws JMSException {
+	public <C extends Component> DarkProducer( 
+			String id, int quota, double errorRate, Component.Factory<C> f ) throws JMSException {
 		this.id = id;
 		this.quota = quota;
 		this.errorRate = errorRate;
@@ -54,19 +56,21 @@ public final class DarkProducer {
 		this.session    = JMS.createSession( connection );
 
 		this.jms = new JMSWriter( session, f.getType() );
-		
+	}
+	
+	public void run() {
 		try {
 			connection.start();
 			
 			log.info( "Starting %s", id );
-			run();
+			doRun();
+		} catch ( JMSException e ) {
 		} finally {			
 			JMS.close( connection );
 		}
 		log.info( "%s finished", id );
 	}
-	
-	private void run() throws JMSException {
+	private void doRun() {
 		for ( int i = quota; i > 0; i-- ) {
 			log.info("%s has to make %d more component(s)", this, i);
 
@@ -88,7 +92,7 @@ public final class DarkProducer {
 				session.commit();				
 			} catch ( JMSException e ) {
 				JMS.rollback( session );
-				throw e;
+				throw new SpaceException(e);
 			}
 		}
 	}

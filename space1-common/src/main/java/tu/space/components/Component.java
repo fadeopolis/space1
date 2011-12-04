@@ -3,6 +3,8 @@ package tu.space.components;
 import java.io.Serializable;
 import java.util.UUID;
 
+import tu.space.utils.SpaceException;
+
 /**
  * A component is a part of a computer
  */
@@ -16,6 +18,19 @@ public abstract class Component implements Serializable {
 		this.id         = id;
 		this.producerId = producerId;
 		this.hasDefect   = isFaulty;
+	}
+	
+	public static <C extends Component> Factory<C> makeFactory( Class<C> c ) {
+		return makeFactory( c.getSimpleName().toLowerCase() );
+	}
+	@SuppressWarnings("unchecked")
+	public static <C extends Component> Factory<C> makeFactory( String type ) {
+		if ( "Cpu".equalsIgnoreCase( type ) )            return (Factory<C>) new CpuFactory();
+		else if ( "Gpu".equalsIgnoreCase( type ) )       return (Factory<C>) new GpuFactory();
+		else if ( "Mainboard".equalsIgnoreCase( type ) ) return (Factory<C>) new MainboardFactory();
+		else if ( "RamModule".equalsIgnoreCase( type ) ) return (Factory<C>) new RamModuleFactory();
+		else if ( "Ram".equalsIgnoreCase( type ) )       return (Factory<C>) new RamModuleFactory();
+		else throw new SpaceException("Bad component type: " + type);
 	}
 	
 	public static abstract class Factory<C extends Component> {

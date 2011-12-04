@@ -4,9 +4,6 @@ package tu.space.components;
  * @author raunig stefan
  */
 public class Mainboard implements Component {
-	
-	private static final long serialVersionUID = -554714308611102434L;
-	
 	public final String id;
 	public final String workerId;
 	/**

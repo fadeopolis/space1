@@ -4,9 +4,6 @@ package tu.space.components;
  * @author raunig stefan
  */
 public class RamModule implements Component {
-	
-	private static final long serialVersionUID = -3075959246441260073L;
-	
 	public final String id;
 	public final String workerId;
 	/**

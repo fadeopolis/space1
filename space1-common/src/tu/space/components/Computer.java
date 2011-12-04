@@ -12,9 +12,6 @@ import tu.space.utils.SpaceException;
  * @author raunig stefan
  */
 public class Computer implements Serializable {
-
-	private static final long serialVersionUID = 7215705354327276440L;
-
 	public final String workerId;
 	
 	public final Component cpu;

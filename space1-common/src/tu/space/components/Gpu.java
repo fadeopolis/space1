@@ -4,9 +4,6 @@ package tu.space.components;
  * @author raunig stefan
  */
 public class Gpu implements Component{
-
-	private static final long serialVersionUID = -773898814151919844L;
-	
 	public final String id;
 	public final String workerId;
 	/**

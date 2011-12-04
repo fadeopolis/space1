@@ -4,9 +4,6 @@ package tu.space.components;
  * @author raunig stefan
  */
 public class Cpu implements Component {
-
-	private static final long serialVersionUID = 6013795714929604250L;
-	
 	public final String id;
 	public final String workerId;
 	/**

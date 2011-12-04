@@ -16,10 +16,12 @@ import javax.jms.Session;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
 
+import tu.space.components.Component;
 import tu.space.components.Computer;
 import tu.space.components.Cpu;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
+import tu.space.components.RamModule;
 import tu.space.gui.DataProvider;
 
 public class DarkDataProvider implements DataProvider {
@@ -41,12 +43,12 @@ public class DarkDataProvider implements DataProvider {
 
 	@Override
 	public TableModel mainboards() throws JMSException {
-		return new DarkTableModel( Gpu.class );
+		return new DarkTableModel( Mainboard.class );
 	}
 
 	@Override
 	public TableModel ramModules() throws JMSException {
-		return new DarkTableModel( Mainboard.class );
+		return new DarkTableModel( RamModule.class, "ram", null );
 	}
 
 	@Override
@@ -74,6 +76,17 @@ public class DarkDataProvider implements DataProvider {
 		};
 	}
 	
+	@Override
+	public void startProducer( String id, Class<? extends Component> type, int quota, double errorRate ) {
+		try {
+			new Thread(
+				new DarkProducer( id, quota, errorRate, Component.makeFactory( type )  )
+			).start();
+		} catch ( JMSException e ) {
+			e.printStackTrace();
+		}
+	}
+	
 	private final Connection conn;
 
 	private class DarkTableModel extends AbstractTableModel {
@@ -81,12 +94,13 @@ public class DarkDataProvider implements DataProvider {
 			this( clazz, null );
 		}
 		public DarkTableModel( Class<?> clazz, String selector ) throws JMSException {
+			this( clazz, clazz.getSimpleName().toLowerCase(), selector );
+		}
+		public DarkTableModel( Class<?> clazz, String name, String selector ) throws JMSException {
 			this.fields = clazz.getFields();
 			this.data   = new Vector<Object>();
 
 			final Session sess = JMS.createSessionWithoutTransactions( conn );
-			
-			String name = clazz.getSimpleName().toLowerCase();
 			
 			Queue queue = sess.createQueue( name );
 			
