@@ -54,6 +54,9 @@ public class DarkDefectTester {
 					
 					c = c.tagAsTestedForDefect( id, c.hasDefect() ? TestStatus.YES : TestStatus.NO );
 
+					// simulate work
+					Util.sleep( 3000 );
+
 					qOut.send( JMS.toMessage( sess, c ) );
 					tOut.send( JMS.toCreatedMessage( sess, c ) );
 					sess.commit();

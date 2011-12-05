@@ -77,7 +77,7 @@ public final class Computer implements Serializable {
 		assert status   != TestStatus.UNTESTED;
 		
 		return new Computer(
-			id, manufacturerId, defectTesterId, completenessTesterId, logisticianId,
+			id, manufacturerId, defectTesterId, testerId, logisticianId,
 			cpu, gpu, mainboard, ramModules,
 			defect, status, false
 		);

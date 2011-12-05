@@ -67,6 +67,9 @@ public class DarkLogistician {
 					
 					c = c.tagAsFinished( id );
 
+					// simulate work
+					Util.sleep( 3000 );
+					
 					if ( c.hasDefect() || !c.isComplete() ) {
 						trashQOut.send( JMS.toMessage( sess, c ) );
 						trashTOut.send( JMS.toCreatedMessage( sess, c ) );

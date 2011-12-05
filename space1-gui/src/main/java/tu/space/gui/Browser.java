@@ -1,6 +1,7 @@
 package tu.space.gui;
 
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.UUID;
@@ -14,6 +15,7 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTabbedPane;
@@ -39,8 +41,10 @@ public class Browser {
 		Box mainPanel = Box.createVerticalBox();
 		frame.add( mainPanel );
 		
-		Box producers = Box.createHorizontalBox();
+		JPanel producers = new JPanel();
 
+		producers.setLayout( new GridLayout( 2, 4 ) );
+		
 		final ComboBoxModel componentType = new DefaultComboBoxModel( 
 			new Object[] {Cpu.class, Gpu.class, Mainboard.class, RamModule.class}
 		);
@@ -61,15 +65,23 @@ public class Browser {
 		jb.addActionListener( new ActionListener() {
 			@Override
 			public void actionPerformed( ActionEvent e ) {
+				String uuid = UUID.randomUUID().toString().substring( 0, 8 );
+				
 				@SuppressWarnings("unchecked")
 				Class<? extends Component> type      = (Class<? extends Component>) componentType.getSelectedItem();
 				int                        quota     = (Integer) quotaModel.getValue();
 				double                     errorRate = (Double)  errorRateModel.getValue();
 				
-				data.startProducer( type.getSimpleName() + "-producer-" + UUID.randomUUID(), type, quota, errorRate );
+				data.startProducer( type.getSimpleName() + "-producer-" + uuid, type, quota, errorRate );
 			}
 		});
 
+		// labels
+		producers.add( new JLabel( "Type" ) );
+		producers.add( new JLabel( "Quota" ) );
+		producers.add( new JLabel( "Error rate" ) );
+		producers.add( new JLabel( "" ) );
+		// user input
 		producers.add( jc );
 		producers.add( new JSpinner( quotaModel ) );
 		producers.add( new JSpinner( errorRateModel ) );

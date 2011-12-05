@@ -2,6 +2,7 @@ package tu.space;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -20,12 +21,10 @@ import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.Topic;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
-
 import tu.space.components.Computer;
+import tu.space.components.Cpu;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
-import tu.space.components.Cpu;
 import tu.space.components.RamModule;
 import tu.space.utils.DummyFuture;
 import tu.space.utils.Logger;
@@ -35,7 +34,7 @@ import tu.space.utils.Util;
 public class DarkManufacturer {
 	public static final String USAGE = "usage: manufacturer ID";
 	
-	public static void main( String... args ) throws JMSException, InterruptedException, ExecutionException {
+	public static void main( String... args ) throws JMSException {
 		if ( args.length != 1 ) {
 			System.err.println( USAGE );
 			System.exit( 1 );
@@ -47,8 +46,8 @@ public class DarkManufacturer {
 
 		final UUIDGenerator uuids = new UUIDGenerator();
 		
-		final Connection conn = new ActiveMQConnectionFactory( DarkServer.BROKER_URL ).createConnection();
-		final Session    sess = conn.createSession( true, Session.SESSION_TRANSACTED );
+		final Connection conn = JMS.openConnection();
+		final Session    sess = JMS.createSession( conn );
 	
 		final Queue cpuQ = sess.createQueue( "cpu" );
 		final Queue gpuQ = sess.createQueue( "gpu" );
@@ -76,45 +75,33 @@ public class DarkManufacturer {
 		final MessageProducer mbdTOut = sess.createProducer( mbdT );
 		final MessageProducer ramTOut = sess.createProducer( ramT );
 		
-		final ExecutorService ex = Executors.newCachedThreadPool();
-		
 		conn.start();
+		final ExecutorService ex = Executors.newCachedThreadPool();
 		
 		new Thread() {
 			public void run() {
 				System.out.println("PRESS ENTER TO QUIT");
 				Util.waitForNewline();
 
+				ex.shutdownNow();
 				JMS.close( conn );
-				ex.shutdown();
 			}
 		}.start();
 		
 		try {
 			while ( true ) {
-				Future<Cpu>       cpuF  = getComponent( ex, cpuIn, log, id, "CPU" );
-				Future<Gpu>       gpuF  = getComponent( ex, gpuIn, log, id, "GPU" );
-				Future<Mainboard> mbdF  = getComponent( ex, mbdIn, log, id, "Mainboard" );
-				Future<RamModule> ram1F = getComponent( ex, ramIn, log, id, "RAM" );
-				Future<RamModule> ram2F = getComponent( ex, ramIn, log, id, "RAM" );
-				Future<RamModule> ram3F = getComponent( ex, ramIn, log, id, "RAM" );
-				Future<RamModule> ram4F = getComponent( ex, ramIn, log, id, "RAM" );
+				Future<Cpu>             cpuF  = getComponent( ex, cpuIn, log, id, "CPU" );
+				Future<Gpu>             gpuF  = getComponent( ex, gpuIn, log, id, "GPU" );
+				Future<Mainboard>       mbdF  = getComponent( ex, mbdIn, log, id, "Mainboard" );
+				Future<List<RamModule>> ramF  = getRam( ex, ramIn, log, id );
 				
-				UUID      uuid  = uuids.generate();
-				Cpu       cpu   = cpuF.get();
-				Mainboard mbd   = mbdF.get();
-				RamModule ram1  = ram1F.get();
-				RamModule ram2  = getOrCancel( ram2F );
-				RamModule ram3  = getOrCancel( ram3F );
-				RamModule ram4  = getOrCancel( ram4F );
-				Gpu       gpu   = getOrCancel( gpuF );
-				
-				List<RamModule> ram = new ArrayList<RamModule>();
-				if ( ram1 != null ) ram.add( ram1 );
-				if ( ram2 != null ) ram.add( ram2 );
-				if ( ram3 != null ) ram.add( ram3 );
-				if ( ram4 != null ) ram.add( ram4 );
-				
+				UUID            uuid  = uuids.generate();
+				Cpu             cpu   = cpuF.get();
+				Gpu             gpu   = getOrCancel( gpuF );
+				Mainboard       mbd   = mbdF.get();
+				List<RamModule> ram   = ramF.get();
+
+				// return unused pieces
 				if ( ram.size() == 3 ) {
 					RamModule back = ram.remove( 0 );
 					ramQOut.send( JMS.toMessage( sess, back ) );
@@ -122,6 +109,9 @@ public class DarkManufacturer {
 				log.info("%s is using %d pieces of RAM", id, ram.size() );
 					
 				Computer c = new Computer( uuid, id, cpu, gpu, mbd, ram );				
+				
+				// simulate work
+				Util.sleep( 3000 );
 				
 				cpuTOut.send( JMS.toRemovedMessage( sess, cpu ) );
 				gpuTOut.send( JMS.toRemovedMessage( sess, gpu ) );
@@ -136,31 +126,62 @@ public class DarkManufacturer {
 				log.info("%s made a PC", id );
 			}
 		} catch ( JMSException e ) {
-//			sess.rollback();
+		} catch ( InterruptedException e ) {
+		} catch ( ExecutionException e ) {
+		} finally {
+			log.info("%s finished", id );
+			if ( ex != null ) ex.shutdownNow();
+			JMS.close( conn );
 		}
-		
-//		final Middleware m = new JMSMiddlewareFactory().make();
-//		new Manufacturer( id, m ).run();
 	}
 	
 	private static <E extends Serializable> Future<E> getComponent( 
-		ExecutorService ex, final MessageConsumer m, final Logger log, final String id, final String type ) {
+		ExecutorService ex, final MessageConsumer queue, 
+		final Logger log, final String id, final String type ) {
 		
 		if ( ex.isTerminated() ) return new DummyFuture<E>();
 		
 		return ex.submit( new Callable<E>() {
 			@Override
 			public E call() throws Exception {
-				Message in = m.receive();
+				Message in = queue.receive();
 				if ( in == null ) return null;
 				
 				ObjectMessage msg = (ObjectMessage) in;
 
 				@SuppressWarnings("unchecked")
 				E e = (E) msg.getObject();
-				log.info("%s got %s", id, type);
+				log.info("%s got a %s", id, type);
 				
 				return e;
+			}
+		});
+	}
+	private static Future<List<RamModule>> getRam( 
+			ExecutorService ex, final MessageConsumer queue, 
+			final Logger log, final String id ) {
+		if ( ex.isTerminated() ) return DummyFuture.make( Collections.<RamModule>emptyList() );
+			
+		return ex.submit( new Callable<List<RamModule>>() {
+			@Override
+			public List<RamModule> call() throws Exception {
+				List<RamModule> ram = new ArrayList<RamModule>();
+				
+				Message in;
+				
+				in = queue.receive();
+				if ( in == null ) return ram;
+				
+				ram.add( (RamModule) ((ObjectMessage) in).getObject() );
+				log.info("%s got a RAM module", id);
+				
+				in = queue.receiveNoWait();
+				if ( in != null ) {
+					ram.add( (RamModule) ((ObjectMessage) in).getObject() );
+					log.info("%s got a RAM module", id);
+				}				
+					
+				return ram;
 			}
 		});
 	}

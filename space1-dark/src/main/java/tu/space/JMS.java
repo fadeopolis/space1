@@ -1,5 +1,7 @@
 package tu.space;
 
+import java.io.Serializable;
+
 import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.ObjectMessage;
@@ -7,7 +9,6 @@ import javax.jms.Session;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 
-import tu.space.components.Component;
 import tu.space.components.Computer;
 import tu.space.components.Computer.TestStatus;
 
@@ -36,46 +37,29 @@ public abstract class JMS {
 		}
 	}
 	
-	public static ObjectMessage toMessage( Session sess, Computer c ) throws JMSException {
-		ObjectMessage msgOut = sess.createObjectMessage( c );
-		
-		if ( c.defect   == TestStatus.UNTESTED ) msgOut.setStringProperty( "defect",   "FOO" );
-		if ( c.complete == TestStatus.UNTESTED ) msgOut.setStringProperty( "complete", "FOO" );
-		msgOut.setBooleanProperty( "finished", c.finished );
-		
-		return msgOut;
-	}
-	
-	public static ObjectMessage toMessage( Session sess, Component c ) throws JMSException {
-		ObjectMessage msgOut = sess.createObjectMessage( c );
+	public static ObjectMessage toMessage( Session sess, Serializable s ) throws JMSException {
+		ObjectMessage msgOut = sess.createObjectMessage( s );
+
+		if ( s instanceof Computer ) {
+			Computer c = (Computer) s;
+			if ( c.defect   == TestStatus.UNTESTED ) msgOut.setStringProperty( "defect",   "FOO" );
+			if ( c.complete == TestStatus.UNTESTED ) msgOut.setStringProperty( "complete", "FOO" );
+			msgOut.setBooleanProperty( "finished", c.finished );
+		}
 		
 		return msgOut;
 	}
 	
-	public static ObjectMessage toCreatedMessage( Session sess, Computer c ) throws JMSException {
-		ObjectMessage msg = toMessage( sess, c );
-		
-		msg.setBooleanProperty("created", true);
-		
-		return msg;
-	}
-	public static ObjectMessage toCreatedMessage( Session sess, Component c ) throws JMSException {
-		ObjectMessage msg = toMessage( sess, c );
+	public static ObjectMessage toCreatedMessage( Session sess, Serializable s ) throws JMSException {
+		ObjectMessage msg = toMessage( sess, s );
 		
 		msg.setBooleanProperty("created", true);
 		
 		return msg;
 	}
 
-	public static ObjectMessage toRemovedMessage( Session sess, Computer c ) throws JMSException {
-		ObjectMessage msg = toMessage( sess, c );		
-		
-		msg.setBooleanProperty("removed", true);
-		
-		return msg;
-	}
-	public static ObjectMessage toRemovedMessage( Session sess, Component c ) throws JMSException {
-		ObjectMessage msg = toMessage( sess, c );
+	public static ObjectMessage toRemovedMessage( Session sess, Serializable s ) throws JMSException {
+		ObjectMessage msg = toMessage( sess, s );
 		
 		msg.setBooleanProperty("removed", true);
 		

@@ -1,4 +1,4 @@
-package main.java.tu.space.utils;
+package tu.space.utils;
 
 public enum EnumComponent {
 	

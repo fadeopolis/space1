@@ -23,6 +23,7 @@ import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
 import tu.space.gui.DataProvider;
+import tu.space.utils.Logger;
 
 public class DarkDataProvider implements DataProvider {
 	public DarkDataProvider() throws JMSException {
@@ -58,12 +59,12 @@ public class DarkDataProvider implements DataProvider {
 
 	@Override
 	public TableModel storage() throws JMSException {
-		return new DarkTableModel( Computer.class, DarkLogistician.SELECTOR );
+		return new DarkTableModel( Computer.class, "storage", null );
 	}
 
 	@Override
 	public TableModel trash() throws JMSException {
-		return new DarkTableModel( Computer.class, "NOT (" + DarkLogistician.SELECTOR + ")" );
+		return new DarkTableModel( Computer.class, "trash", null );
 	}
 
 	@Override
@@ -83,13 +84,20 @@ public class DarkDataProvider implements DataProvider {
 				new DarkProducer( id, quota, errorRate, Component.makeFactory( type )  )
 			).start();
 		} catch ( JMSException e ) {
-			e.printStackTrace();
+			log.error(
+					"Could not start %s, component type = %s, quota = %s, error rate = %s",
+					id, 
+					type.getTypeParameters(),
+					quota,
+					errorRate
+			);
 		}
 	}
 	
 	private final Connection conn;
-
-	private class DarkTableModel extends AbstractTableModel {
+	private final Logger     log = Logger.make( getClass() );
+	
+	public class DarkTableModel extends AbstractTableModel {
 		public DarkTableModel( Class<?> clazz ) throws JMSException {
 			this( clazz, null );
 		}
@@ -98,7 +106,7 @@ public class DarkDataProvider implements DataProvider {
 		}
 		public DarkTableModel( Class<?> clazz, String name, String selector ) throws JMSException {
 			this.fields = clazz.getFields();
-			this.data   = new Vector<Object>();
+			this.data   = new Vector<Object>( 16, 8 );
 
 			final Session sess = JMS.createSessionWithoutTransactions( conn );
 			
@@ -113,20 +121,25 @@ public class DarkDataProvider implements DataProvider {
 			new JMSTopicListener( sess, name, selector ) {
 				@Override
 				public void onRemoved( Object o, Message msg ) {
-					data.remove( 0 );
-					DarkTableModel.this.fireTableStructureChanged();
+					if ( data.isEmpty() ) return;
+					
+					data.remove( o );
+					DarkTableModel.this.fireTableRowsInserted( 0, getRowCount() );
 				}
 				
 				@Override
 				public void onCreated( Object o, Message msg ) {
 					data.add( o );
-					DarkTableModel.this.fireTableStructureChanged();
+					DarkTableModel.this.fireTableRowsInserted( 0, getRowCount() );
 				}
 			};
 		}
 		
 		@Override
 	    public String getColumnName( int column ) {
+			if ( column == 0 ) return "Index";
+			column--;
+			
 			return fields[column].getName();
 	    }
 		
@@ -137,12 +150,18 @@ public class DarkDataProvider implements DataProvider {
 
 		@Override
 		public int getColumnCount() {
-			return fields.length;
+			return fields.length + 1;
 		}
 
 		@Override
 		public Object getValueAt( int rowIndex, int columnIndex ) {
 			try {
+				if ( columnIndex == 0 ) return rowIndex;
+				columnIndex--;
+				
+				if ( rowIndex    < 0 || rowIndex    >= data.size()   ) return null;
+				if ( columnIndex < 0 || columnIndex >= fields.length ) return null;
+				
 				return fields[columnIndex].get( data.get( rowIndex ) );
 			} catch ( IllegalArgumentException e ) {
 				return "ERROR: " + e;

@@ -29,6 +29,9 @@ public class Logger {
 	public void warn( String msg, Object... args ) {
 		log( Level.WARN, msg, args );
 	}
+	public void error( String msg, Object... args ) {
+		log( Level.ERROR, msg, args );
+	}
 	public void log( Level lvl, String msg, Object... args ) {
 		log.log( lvl, String.format( msg, args ) );
 	}

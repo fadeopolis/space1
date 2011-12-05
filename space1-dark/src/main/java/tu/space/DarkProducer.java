@@ -97,6 +97,11 @@ public final class DarkProducer implements Runnable {
 		}
 	}
 	
+	@Override
+	public String toString() {
+		return id;
+	}
+	
 	private final String id;
 	private final int    quota;
 	private final double errorRate;
