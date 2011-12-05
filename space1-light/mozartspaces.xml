@@ -1,6 +1,6 @@
 <mozartspacesCoreConfig>
 <!-- This default configuration is also contained in the code and used when no configuration file is found -->
-	<embeddedSpace>false</embeddedSpace>
+	<embeddedSpace>true</embeddedSpace>
     	<coreProcessor>
         <!--
             The number of threads for the XP thread pool - supported values are:
@@ -51,7 +51,7 @@
                 -->
                 <threads>1000</threads>
                 <!-- exclusive port to listen for incoming connections -->
-                <receiverPort>9876</receiverPort>
+                <receiverPort>9877</receiverPort>
                 <!-- the serializer to use, can be a serializer ID or a Apache Commons configuration as below -->
                 <serializer>${serializers.serializer(0)}</serializer>
             </tcpsocket>            

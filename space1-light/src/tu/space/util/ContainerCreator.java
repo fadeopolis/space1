@@ -5,13 +5,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.mozartspaces.capi3.AnyCoordinator;
+import org.mozartspaces.capi3.Coordinator;
 import org.mozartspaces.capi3.FifoCoordinator;
+import org.mozartspaces.capi3.LabelCoordinator;
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.MzsConstants.Container;
 import org.mozartspaces.core.MzsConstants.RequestTimeout;
 import org.mozartspaces.core.MzsCoreException;
-import org.mozartspaces.notifications.NotificationListener;
 
 /**
  * This creator manages ContainerReferences
@@ -120,4 +121,78 @@ public abstract class ContainerCreator{
 		return cref;
 	}
 	
+	/**
+	 * This container holds Pc's, it will be looked up if created, else 
+	 * it will be created.
+	 * 
+	 * @param space
+	 * @param capi
+	 * @return cref
+	 * 				Container for Mainboards
+	 * @throws MzsCoreException
+	 */
+	public static ContainerReference getPcContainer(final URI space, final Capi capi) throws MzsCoreException{
+		ContainerReference cref;
+		try {
+			//Log lookup for Container named CpuContainer
+			cref = capi.lookupContainer("PcContainer", space, RequestTimeout.DEFAULT, null);
+		} catch (MzsCoreException e) {
+			//Log not found create it
+			List<Coordinator> oblicoord = new ArrayList<Coordinator>();
+			oblicoord.add(new LabelCoordinator());
+			cref = capi.createContainer("PcContainer", space, Container.UNBOUNDED, oblicoord, null, null);
+		}
+		return cref;
+	}
+	
+	/**
+	 * This container holds defect Pc's, it will be looked up if created, else 
+	 * it will be created.
+	 * 
+	 * @param space
+	 * @param capi
+	 * @return cref
+	 * 				Container for Mainboards
+	 * @throws MzsCoreException
+	 */
+	public static ContainerReference getPcDefectContainer(final URI space, final Capi capi) throws MzsCoreException{
+		ContainerReference cref;
+		try {
+			//Log lookup for Container named CpuContainer
+			cref = capi.lookupContainer("PcDefectContainer", space, RequestTimeout.DEFAULT, null);
+		} catch (MzsCoreException e) {
+			//Log not found create it
+			List<AnyCoordinator> oblicoord = new ArrayList<AnyCoordinator>();
+			oblicoord.add(new AnyCoordinator());
+			//Default coordinator is FIFOCoordinator
+			cref = capi.createContainer("PcDefectContainer", space, Container.UNBOUNDED, oblicoord, null, null);
+		}
+		return cref;
+	}
+	
+	/**
+	 * This container holds defect Pc's, it will be looked up if created, else 
+	 * it will be created.
+	 * 
+	 * @param space
+	 * @param capi
+	 * @return cref
+	 * 				Container for Mainboards
+	 * @throws MzsCoreException
+	 */
+	public static ContainerReference getEventContainer(final URI space, final Capi capi) throws MzsCoreException{
+		ContainerReference cref;
+		try {
+			//Log lookup for Container named CpuContainer
+			cref = capi.lookupContainer("SpaceEvent", space, RequestTimeout.DEFAULT, null);
+		} catch (MzsCoreException e) {
+			//Log not found create it
+			List<FifoCoordinator> oblicoord = new ArrayList<FifoCoordinator>();
+			oblicoord.add(new FifoCoordinator());
+			//Default coordinator is FIFOCoordinator
+			cref = capi.createContainer("SpaceEvent", space, Container.UNBOUNDED, oblicoord, null, null);
+		}
+		return cref;
+	}
+
 }

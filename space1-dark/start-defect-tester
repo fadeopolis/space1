@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./startWithMaven tu.space.DarkDefectTester "$@"

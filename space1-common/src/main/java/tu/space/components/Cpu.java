@@ -1,37 +1,9 @@
-package main.java.tu.space.components;
+package tu.space.components;
 
-/**
- * @author raunig stefan
- */
-public class Cpu implements Component {
+import java.util.UUID;
 
-	private static final long serialVersionUID = 6013795714929604250L;
-	
-	public final String id;
-	public final String workerId;
-	/**
-	 * error true if this component has a production failure
-	 */
-	public final boolean error;
-	
-	public Cpu(final String id, final String workerId, final boolean error){
-		this.id = id;
-		this.workerId = workerId;
-		this.error = error;
-	}
-	
-	@Override
-	public String getId() {
-		return id;
-	}
-
-	@Override
-	public String getWorkerId() {
-		return workerId;
-	}
-
-	@Override
-	public boolean getError() {
-		return error;
+public class Cpu extends Component {
+	public Cpu( UUID id, String producerId, boolean isFaulty ) {
+		super( id, producerId, isFaulty );
 	}
 }

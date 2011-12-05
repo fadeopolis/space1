@@ -1,16 +1,20 @@
-package main.java.tu.space.utils;
+package tu.space.utils;
 
-/**
- * 
- * A simple custom exception class
- * 
- * @author raunig stefan
- */
-public class SpaceException extends Exception {
+@SuppressWarnings("serial")
+public class SpaceException extends RuntimeException {
 
-	private static final long serialVersionUID = 5981962545946989906L;
-
-	public SpaceException(String msg){
-		super(msg);
+	public SpaceException() {
+		super();
 	}
+	public SpaceException( String msg ){
+		super( msg );
+	}
+
+	public SpaceException( String message, Throwable cause ) {
+		super( message, cause );
+	}
+
+	public SpaceException( Throwable cause ) {
+		super( cause );
+	}	
 }

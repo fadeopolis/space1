@@ -1,38 +1,9 @@
-package main.java.tu.space.components;
+package tu.space.components;
 
-/**
- * @author raunig stefan
- */
-public class Gpu implements Component{
+import java.util.UUID;
 
-	private static final long serialVersionUID = -773898814151919844L;
-	
-	public final String id;
-	public final String workerId;
-	/**
-	 * error true if this component has a production failure
-	 */
-	public final boolean error;
-	
-	public Gpu(final String id, final String workerId, final boolean error){
-		this.id = id;
-		this.workerId = workerId;
-		this.error = error;
+public class Gpu extends Component{
+	public Gpu( UUID id, String producerId, boolean isFaulty ) {
+		super( id, producerId, isFaulty );
 	}
-	
-	@Override
-	public String getId() {
-		return id;
-	}
-
-	@Override
-	public String getWorkerId() {
-		return workerId;
-	}
-
-	@Override
-	public boolean getError() {
-		return error;
-	}
-
 }
