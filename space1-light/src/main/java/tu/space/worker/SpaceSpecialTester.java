@@ -63,15 +63,15 @@ public class SpaceSpecialTester extends SpaceTester {
 				if(!pc.hasDefect()){
 					//check if pc is complete
 					pc = pc.tagAsTestedForDefect(workerId, TestStatus.YES);
-					Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("testedError"));		
+					Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("tested"));		
 					capi.write(crefPc, RequestTimeout.DEFAULT, null, entry);
 					log.info("Tester: %s, tested error of Pc: %s, result okay", workerId, pc.id.toString());
 				} else {
 					//move to trash
 					pc = pc.tagAsTestedForDefect(workerId, TestStatus.YES);
-					Entry entry = new Entry(pc);
-					capi.write(crefPcDefect, RequestTimeout.DEFAULT, null, entry);
-					log.info("Tester: %s, tested error of Pc: %s, result uncomplete move to trash", workerId, pc.id.toString());
+					Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("testedError"));
+					capi.write(crefPc, RequestTimeout.DEFAULT, null, entry);
+					log.info("Tester: %s, tested error of Pc: %s, result uncomplete", workerId, pc.id.toString());
 				}
 			}
 		} catch (MzsCoreException e) {

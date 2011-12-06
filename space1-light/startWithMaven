@@ -1,0 +1,6 @@
+#!/bin/bash
+
+MAIN_CLASS=$1; shift;
+ARGS="$@"
+	
+mvn -q exec:exec -Dexec.executable="java" -Dexec.args="-cp %classpath $MAIN_CLASS $ARGS"

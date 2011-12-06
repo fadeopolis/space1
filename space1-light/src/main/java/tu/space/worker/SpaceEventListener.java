@@ -25,7 +25,12 @@ public abstract class SpaceEventListener implements NotificationListener{
 	private final URI space;
 	private final Capi capi;
 	
-	private ContainerReference cref;
+	private ContainerReference crefmain;
+	private ContainerReference crefcpu;
+	private ContainerReference crefgpu;
+	private ContainerReference crefram;
+	private ContainerReference crefpc;
+	private ContainerReference creftrash;
 	
 	public SpaceEventListener(){
 		Logger log = Logger.make(SpaceEventListener.class);
@@ -40,21 +45,26 @@ public abstract class SpaceEventListener implements NotificationListener{
 		
 		try {
 			//lookup container
-			cref = ContainerCreator.getEventContainer(space, capi);
+			crefmain = ContainerCreator.getMainboardContainer( space, capi );
+			crefcpu = ContainerCreator.getCpuContainer( space, capi );
+			crefgpu = ContainerCreator.getGpuContainer( space, capi );
+			crefram = ContainerCreator.getRamContainer( space, capi );
+			crefpc = ContainerCreator.getPcContainer( space, capi );
+			creftrash = ContainerCreator.getPcDefectContainer( space, capi );
 			
 			//create Notifications
-			nManager.createNotification(cref, this, Operation.WRITE, Operation.DELETE);
-			
-			//take what is in space
-			List<Serializable> takeEvents = capi.take(cref, Arrays.asList(FifoCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.DEFAULT, null);
+//			nManager.createNotification(cref, this, Operation.WRITE, Operation.DELETE);
+//			
+//			//take what is in space
+//			List<Serializable> takeEvents = capi.take(cref, Arrays.asList(FifoCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.DEFAULT, null);
 			
 			//fire callback
-			getAll(takeEvents);
+//			getAll(takeEvents);
 		} catch (MzsCoreException e) {
 			log.info("Lookup for SpaceEvent failed");
-			cref = null;
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+//			cref = null;
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
 		}
 	}
 	
@@ -62,6 +72,8 @@ public abstract class SpaceEventListener implements NotificationListener{
 	public void entryOperationFinished(Notification source, Operation operation, List<? extends Serializable> entries) {
 		
 		Serializable entry = entries.get(0);
+		
+//		if(entry instanceof Computer)
 		
 		if(operation.equals(Operation.WRITE)){
 			onCreated(entry);

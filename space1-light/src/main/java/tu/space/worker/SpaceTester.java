@@ -115,15 +115,15 @@ public class SpaceTester implements NotificationListener {
 				if(pc.isComplete()){
 					//check if pc is complete
 					pc = pc.tagAsTestedForCompleteness(workerId, TestStatus.YES);
-					Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("testedCompleteness"));		
+					Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("testedCompleteness"));	
 					capi.write(crefPc, RequestTimeout.DEFAULT, null, entry);
 					log.info("Tester: %s, tested completeness of Pc: %s, result okay", workerId, pc.id.toString());
 				} else {
 					//move to trash
 					pc = pc.tagAsTestedForCompleteness(workerId, TestStatus.YES);
-					Entry entry = new Entry(pc);
-					capi.write(crefPcDefect, RequestTimeout.DEFAULT, null, entry);
-					log.info("Tester: %s, tested completeness of Pc: %s, result uncomplete move to trash", workerId, pc.id.toString());
+					Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("testedError"));
+					capi.write(crefPc, RequestTimeout.DEFAULT, null, entry);
+					log.info("Tester: %s, tested completeness of Pc: %s, result uncomplete", workerId, pc.id.toString());
 				}
 			}
 		} catch (MzsCoreException e) {

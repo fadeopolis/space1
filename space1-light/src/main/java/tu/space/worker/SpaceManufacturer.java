@@ -290,28 +290,31 @@ public class SpaceManufacturer implements NotificationListener {
 	            	create = false;
 	            }
 			} 
-        	
-			//commit Transaction and build pc if possible
-			capi.commitTransaction(tx);
 			
 			if(create){
 				//build the pc
-				Computer pc=null;
-				
+				Computer pc=null;		
 				switch(rams.size()){
+					case 0:
+						capi.rollbackTransaction( tx );
+						return;
 					case 1:
-						rams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(1)), MzsConstants.RequestTimeout.ZERO, null);
+						rams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(1)), MzsConstants.RequestTimeout.ZERO, tx);
 						break;
 					case 2:
-						rams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(2)), MzsConstants.RequestTimeout.ZERO, null);
+						rams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(2)), MzsConstants.RequestTimeout.ZERO, tx);
 						break;
 					case 3:
-						rams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(2)), MzsConstants.RequestTimeout.ZERO, null);
+						rams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(2)), MzsConstants.RequestTimeout.ZERO, tx);
 						break;
 					default:
-						rams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(4)), MzsConstants.RequestTimeout.ZERO, null);
+						rams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(4)), MzsConstants.RequestTimeout.ZERO, tx);
 						break;
 				}
+				
+				//commit Transaction and build pc if possible
+				capi.commitTransaction(tx);
+				
 				//assemble pc
 				pc = new Computer(uuids.generate(), workerId, cpus.get(0), gpus.get(0), mainboards.get(0), rams);
 

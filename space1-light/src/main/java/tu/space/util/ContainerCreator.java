@@ -195,4 +195,19 @@ public abstract class ContainerCreator{
 		return cref;
 	}
 
+	
+	public static ContainerReference getStorageContainer(final URI space, final Capi capi) throws MzsCoreException{
+		ContainerReference cref;
+		try {
+			//Log lookup for Container named CpuContainer
+			cref = capi.lookupContainer("Storage", space, RequestTimeout.DEFAULT, null);
+		} catch (MzsCoreException e) {
+			//Log not found create it
+			List<AnyCoordinator> oblicoord = new ArrayList<AnyCoordinator>();
+			oblicoord.add(new AnyCoordinator());
+			//Default coordinator is FIFOCoordinator
+			cref = capi.createContainer("Storage", space, Container.UNBOUNDED, oblicoord, null, null);
+		}
+		return cref;
+	}
 }

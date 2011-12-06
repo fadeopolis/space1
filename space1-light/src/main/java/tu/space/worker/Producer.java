@@ -1,7 +1,10 @@
 package tu.space.worker;
 
+import java.net.URI;
 import java.util.Random;
 import java.util.UUID;
+
+import org.mozartspaces.core.Capi;
 
 import tu.space.components.Component;
 import tu.space.utils.UUIDGenerator;
@@ -12,7 +15,7 @@ import tu.space.utils.UUIDGenerator;
  *
  * @author raunig stefan
 **/
-public abstract class Producer implements Runnable {
+public abstract class Producer extends SpaceEvent implements Runnable {
 	
 	private Thread thread;
 	
@@ -20,7 +23,8 @@ public abstract class Producer implements Runnable {
 	private int quantity;
 	private double errorRate;
 	
-	public Producer(final String workerId, final double errorRate, final String component, final int quantity){
+	public Producer(final String workerId, final double errorRate, final String component, final int quantity, final Capi capi){
+		super(capi);
 		this.workerId = workerId;
 		this.errorRate = errorRate;
 		this.component = component;

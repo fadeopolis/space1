@@ -5,11 +5,22 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.Serializable;
 import java.lang.reflect.Field;
+import java.net.URI;
 import java.util.List;
 import java.util.Vector;
 
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.TableModel;
+
+import org.mozartspaces.core.Capi;
+import org.mozartspaces.core.ContainerReference;
+import org.mozartspaces.core.DefaultMzsCore;
+import org.mozartspaces.core.Entry;
+import org.mozartspaces.core.MzsCore;
+import org.mozartspaces.notifications.Notification;
+import org.mozartspaces.notifications.NotificationListener;
+import org.mozartspaces.notifications.NotificationManager;
+import org.mozartspaces.notifications.Operation;
 
 import tu.space.components.Component;
 import tu.space.components.Computer;
@@ -18,6 +29,8 @@ import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
 import tu.space.gui.DataProvider;
+import tu.space.util.ContainerCreator;
+import tu.space.utils.SpaceException;
 
 public class SpaceDataProvider implements DataProvider {
 	public SpaceDataProvider() {
@@ -26,38 +39,80 @@ public class SpaceDataProvider implements DataProvider {
 	
 	@Override
 	public TableModel cpus() throws Exception {
-		return new SpaceTableModel(Cpu.class);
+		MzsCore core = DefaultMzsCore.newInstance(0);
+		Capi    capi = new Capi(core);
+		URI     space = URI.create("xvsm://localhost:9877");			
+
+		ContainerReference cref = ContainerCreator.getCpuContainer( space, capi );
+		
+		return new SpaceTableModel(Cpu.class, core, cref );
 	}
 
 	@Override
 	public TableModel gpus() throws Exception{
-		return new SpaceTableModel(Gpu.class);
+		MzsCore core = DefaultMzsCore.newInstance(0);
+		Capi    capi = new Capi(core);
+		URI     space = URI.create("xvsm://localhost:9877");			
+
+		ContainerReference cref = ContainerCreator.getGpuContainer( space, capi );
+		
+		return new SpaceTableModel(Gpu.class, core, cref );
 	}
 
 	@Override
 	public TableModel mainboards() throws Exception {
-		return new SpaceTableModel(Mainboard.class);
+		MzsCore core = DefaultMzsCore.newInstance(0);
+		Capi    capi = new Capi(core);
+		URI     space = URI.create("xvsm://localhost:9877");			
+
+		ContainerReference cref = ContainerCreator.getMainboardContainer( space, capi );
+		
+		return new SpaceTableModel(Mainboard.class, core, cref );
+
 	}
 
 	@Override
 	public TableModel ramModules() throws Exception {
-		return new SpaceTableModel(RamModule.class, "ram", null);
+		MzsCore core = DefaultMzsCore.newInstance(0);
+		Capi    capi = new Capi(core);
+		URI     space = URI.create("xvsm://localhost:9877");			
+
+		ContainerReference cref = ContainerCreator.getRamContainer( space, capi );
+		
+		return new SpaceTableModel(RamModule.class, core, cref );
 	}
 
 	@Override
 	public TableModel computers() throws Exception {
-		return new SpaceTableModel(Computer.class);
+		MzsCore core = DefaultMzsCore.newInstance(0);
+		Capi    capi = new Capi(core);
+		URI     space = URI.create("xvsm://localhost:9877");			
+
+		ContainerReference cref = ContainerCreator.getPcContainer( space, capi );
+		
+		return new SpaceTableModel(Computer.class, core, cref );
 	}
 
 	@Override
 	public TableModel storage() throws Exception {
-		return new SpaceTableModel(Computer.class, null);
+		MzsCore core = DefaultMzsCore.newInstance(0);
+		Capi    capi = new Capi(core);
+		URI     space = URI.create("xvsm://localhost:9877");			
+
+		ContainerReference cref = ContainerCreator.getStorageContainer( space, capi );
+		
+		return new SpaceTableModel(Computer.class, core, cref );
 	}
 
 	@Override
 	public TableModel trash() throws Exception {
-		return new SpaceTableModel(Computer.class, null);
+		MzsCore core = DefaultMzsCore.newInstance(0);
+		Capi    capi = new Capi(core);
+		URI     space = URI.create("xvsm://localhost:9877");			
 
+		ContainerReference cref = ContainerCreator.getPcDefectContainer( space, capi );
+		
+		return new SpaceTableModel(Computer.class, core, cref );
 	}
 
 	@Override
@@ -79,7 +134,7 @@ public class SpaceDataProvider implements DataProvider {
 			} else {
 				msg = type.getSimpleName().toLowerCase();
 			}
-			new SpaceProducer(id, errorRate, msg, quota).start();
+			SpaceProducer.make(id, errorRate, msg, quota).start();
 		} catch ( Exception e ) {
 			e.printStackTrace();
 		}
@@ -87,43 +142,52 @@ public class SpaceDataProvider implements DataProvider {
 	
 	@SuppressWarnings("serial")
 	private class SpaceTableModel extends AbstractTableModel {
-		public SpaceTableModel( Class<?> clazz ) throws Exception {
-			this( clazz, null );
-		}
-		public SpaceTableModel( Class<?> clazz, String selector ) throws Exception {
-			this( clazz, clazz.getSimpleName().toLowerCase(), selector );
-		}
-		public SpaceTableModel( Class<?> clazz, String name, String selector ) throws Exception {
+		public SpaceTableModel( Class<?> clazz, MzsCore core, ContainerReference cref ) throws Exception {
 			this.fields = clazz.getFields();
 			this.data   = new Vector<Object>();
 						
-			//read all
-			
-			new SpaceEventListener() {
+			NotificationManager nManager = new NotificationManager(core);
+						
+			nManager.createNotification( cref, new NotificationListener() {
 				@Override
-				public void getAll(List<Serializable> objs){
-					for(Serializable obj: objs){
-						data.add(obj);		
+				public void entryOperationFinished( Notification source,
+						Operation operation, List<? extends Serializable> entries ) {
+					Serializable s = entries.get( 0 );
+					
+					if ( s instanceof Entry )
+						s = ((Entry) s).getValue(); 
+					
+					data.add( s );
+					SpaceTableModel.this.fireTableRowsInserted( 0, getRowCount() );
+					
 					}
-					SpaceTableModel.this.fireTableStructureChanged();
-				}
-				
+				},
+				Operation.WRITE
+			);
+			nManager.createNotification( cref, new NotificationListener() {
 				@Override
-				public void onRemoved(Object obj) {
-					data.remove(0);
-					SpaceTableModel.this.fireTableStructureChanged();
+				public void entryOperationFinished( Notification source,
+						Operation operation, List<? extends Serializable> entries ) {
+					Serializable s = entries.get( 0 );
+					
+					if ( s instanceof Entry )
+						s = ((Entry) s).getValue(); 
+					
+					data.remove( s );
+					SpaceTableModel.this.fireTableRowsDeleted( 0, getRowCount() );
 				}
-				
-				@Override
-				public void onCreated(Object obj) {
-					data.add(obj);
-					SpaceTableModel.this.fireTableStructureChanged();
-				}
-			};
+				},
+				Operation.TAKE
+			);
+			
+			//read all
 		}
 		
 		@Override
 	    public String getColumnName( int column ) {
+			if ( column == 0 ) return "Index";
+			column--;
+			
 			return fields[column].getName();
 	    }
 		
@@ -134,12 +198,18 @@ public class SpaceDataProvider implements DataProvider {
 
 		@Override
 		public int getColumnCount() {
-			return fields.length;
+			return fields.length + 1;
 		}
 
 		@Override
 		public Object getValueAt( int rowIndex, int columnIndex ) {
 			try {
+				if ( columnIndex == 0 ) return rowIndex;
+				columnIndex--;
+				
+				if ( rowIndex    < 0 || rowIndex    >= data.size()   ) return null;
+				if ( columnIndex < 0 || columnIndex >= fields.length ) return null;
+				
 				return fields[columnIndex].get( data.get( rowIndex ) );
 			} catch ( IllegalArgumentException e ) {
 				return "ERROR: " + e;

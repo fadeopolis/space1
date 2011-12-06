@@ -1,6 +1,5 @@
 package tu.space.worker;
 
-import java.net.URI;
 
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
@@ -35,27 +34,51 @@ public class SpaceProducer extends Producer {
 	private final String workerId;
 
 	private final MzsCore core;
-	private final Capi capi;
-	private final URI space;
+	private Capi capi;
+//	private URI space = URI.create("xvsm://localhost:9877");
+	public static final String USAGE = 
+			"usage: producer ID TYPE QUOTA ERROR_RATE\n"      +
+			"  where TYPE is one of CPU, GPU, MAINBOARD, RAM"
+	;
 		
-	public static void main(String[] args) throws SpaceException {
-		//test main
-		Logger.configure();
-
-		new SpaceProducer("TestWorker3", 10, "ram", 3).start();
+//	public static void main(String[] args) throws SpaceException {
+//		//test main
+//		Logger.configure();
+//
+//		if ( args.length != 4 ) {
+//			System.err.println( USAGE );
+//			System.exit( 1 );
+//		}
+//		final String id        = args[0];
+//		final int    quota     = Integer.parseInt( args[2] );
+//		final double errorRate = Double.parseDouble( args[3] );
+//		
+//		if ( "CPU".equalsIgnoreCase( args[1] ) )            {}			
+//		else if ( "GPU".equalsIgnoreCase( args[1] ) )       {} 
+//		else if ( "MAINBOARD".equalsIgnoreCase( args[1] ) ) {}
+//		else if ( "RAM".equalsIgnoreCase( args[1] ) )       {}
+//		else {
+//			System.err.println( USAGE );
+//			System.exit( 1 );
+//			return;
+//		}
+//		
+//		make( id, errorRate, args[1].toLowerCase(), quota ).start();
+//	}
+	
+	public static SpaceProducer make(final String workerId, final double errorRate, final String component, final int quantity) {
+		MzsCore core = DefaultMzsCore.newInstance( 0 );
+		Capi    capi = new Capi(core);
+		return new SpaceProducer( workerId, errorRate, component, quantity, core, capi);
 	}
 	
-	public SpaceProducer(final String workerId, final double errorRate, final String component, final int quantity) {
-		super(workerId, errorRate, component, quantity);
-		
+	public SpaceProducer(
+			final String workerId, final double errorRate, final String component, final int quantity, 
+			MzsCore core, Capi capi ) {
+		super(workerId, errorRate, component, quantity, capi);
 		this.workerId = workerId;
-		
-		//default local space
-		core = DefaultMzsCore.newInstance(0);
-	    capi = new Capi(core);
-	    
-	    //embedded space
-	    space = URI.create("xvsm://localhost:9877");
+		this.capi = capi;
+		this.core = core;
 	}
 	
 	@Override
@@ -81,6 +104,7 @@ public class SpaceProducer extends Producer {
 	        	        
 	        //write an entry to the container using the default timeout and the transaction
 	        log.info("Worker: %s, produziere %s, Error: %s", workerId, component.id.toString(), component.hasDefect);
+
 	        capi.write(cref, RequestTimeout.DEFAULT, tx, new Entry(component));
 	        
 	        //commit the transaction

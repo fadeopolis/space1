@@ -21,6 +21,7 @@ import org.mozartspaces.notifications.NotificationManager;
 import org.mozartspaces.notifications.Operation;
 
 import tu.space.components.Computer;
+import tu.space.components.Computer.TestStatus;
 import tu.space.util.ContainerCreator;
 import tu.space.utils.Logger;
 
@@ -41,6 +42,8 @@ public class SpaceLogistican implements NotificationListener {
 	private final NotificationManager notification;
 	
 	private ContainerReference crefPc;
+	private ContainerReference crefPcDefect;
+	private ContainerReference crefStorage;
 	
 	private List<Computer> pcs;
 	
@@ -78,6 +81,8 @@ public class SpaceLogistican implements NotificationListener {
 		try {
 			//lookup container
 			crefPc = ContainerCreator.getPcContainer(space, capi);
+			crefPcDefect = ContainerCreator.getPcDefectContainer(space, capi);
+			crefStorage = ContainerCreator.getStorageContainer(space, capi);
 			
 			//create Notifications
 			notification.createNotification(crefPc, this, Operation.WRITE);
@@ -101,10 +106,17 @@ public class SpaceLogistican implements NotificationListener {
 			}
 			for(Computer pc: pcs){
 				//set pc finish
-				pc = pc.tagAsFinished(workerId);
-				Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("finish"));		
-				capi.write(crefPc, RequestTimeout.DEFAULT, null, entry);
-				log.info("Logistican: %s, delivered Pc: %s", workerId, pc.id.toString());
+				if ( pc.hasDefect() || !pc.isComplete() ) {
+					//move to trash
+					Entry entry = new Entry(pc);
+					capi.write(crefPcDefect, RequestTimeout.DEFAULT, null, entry);
+					log.info("Logistican: %s, tested completeness of Pc: %s, result uncomplete move to trash", workerId, pc.id.toString());
+				} else {
+					pc = pc.tagAsFinished(workerId);
+					Entry entry = new Entry(pc);		
+					capi.write(crefStorage, RequestTimeout.DEFAULT, null, entry);
+					log.info("Logistican: %s, delivered Pc: %s", workerId, pc.id.toString());					
+				}
 			}
 		} catch (MzsCoreException e) {
 			log.info("Logistican: %s could not deliver pc.", workerId);

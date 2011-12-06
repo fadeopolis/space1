@@ -16,12 +16,14 @@ public abstract class SpaceEvent {
 	
 	private final Capi capi;
 	private ContainerReference crefEvent;
+	protected URI space = URI.create("xvsm://localhost:9877");
 	
-	public SpaceEvent(final URI space, final Capi capi){
+	public SpaceEvent(final Capi capi){
 		this.capi = capi;
 		try {
 			//lookup container
 			crefEvent = ContainerCreator.getEventContainer(space, capi);
+			
 		} catch (MzsCoreException e) {
 			crefEvent = null;
 		}
@@ -35,7 +37,6 @@ public abstract class SpaceEvent {
 			e.printStackTrace();
 		}
 	}
-	
 	public void deleteEvent(final Serializable s){
 		try {
 			//TODO select ????
