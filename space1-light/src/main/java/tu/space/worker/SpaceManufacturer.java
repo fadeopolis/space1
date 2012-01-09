@@ -95,7 +95,7 @@ public class SpaceManufacturer implements NotificationListener {
 			crefCpu = ContainerCreator.getCpuContainer(space, capi);
 			crefGpu = ContainerCreator.getGpuContainer(space, capi);
 			crefRam = ContainerCreator.getRamContainer(space, capi);
-			crefPc = ContainerCreator.getPcContainer(space, capi);
+			crefPc  = ContainerCreator.getPcContainer(space, capi);
 			
 			//create Notifications
 			notification.createNotification(crefMainboards, this, Operation.WRITE);
@@ -114,11 +114,15 @@ public class SpaceManufacturer implements NotificationListener {
 	 */
 	public void buildPcOnStartUp(){
 		try{
+						
+			//crate transaction
+			TransactionReference tx = capi.createTransaction(5000, space);
+		
 			/*
-			 *  read all entries of mainboard to decide how many pc's we can build
+			 * read all entries of mainboard to decide how many pc's we can build
 			 * from space.
 			 */
-			ArrayList<Component> readMainboards = capi.read(crefMainboards, Arrays.asList(FifoCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.INFINITE , null);
+			ArrayList<Component> readMainboards = capi.read(crefMainboards, Arrays.asList(FifoCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.INFINITE , tx);
 			
 			/*
 			 * a trick to optimize the loop iterations, because we can only build as much pc's
@@ -132,28 +136,27 @@ public class SpaceManufacturer implements NotificationListener {
 					
 			for(int i=0;i<=readMainboards.size()-cpuAmount;i++){
 				if(once){
-					ArrayList<Component> readcpus = capi.read(crefMainboards, Arrays.asList(FifoCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO , null);
-					ArrayList<Component> readram = capi.read(crefRam, Arrays.asList(AnyCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO, null);
-					ArrayList<Component> readgpu = capi.read(crefGpu, Arrays.asList(AnyCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO, null);
+					ArrayList<Component> readcpus = capi.read(crefMainboards, Arrays.asList(FifoCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO , tx);
+					ArrayList<Component> readram = capi.read(crefRam, Arrays.asList(AnyCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO, tx);
+					ArrayList<Component> readgpu = capi.read(crefGpu, Arrays.asList(AnyCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO, tx);
 					cpuAmount = readcpus.size();
 					ramAmount = readram.size();
 					gpuAmount = readgpu.size();
 					once = false;
-					
 				}
 				
 				// as long as mainboard cpu and ram is available build a pc
-				if(cpuAmount > 0 && ramAmount > 0){
-					//crate transaction
-					TransactionReference tx = capi.createTransaction(5000, space);
-					
+				if(cpuAmount > 0 && ramAmount > 0){				
 					//take mainboard and cpu
 					ArrayList<Component> takeMainboard = capi.take(crefMainboards, Arrays.asList(FifoCoordinator.newSelector(1)), MzsConstants.RequestTimeout.TRY_ONCE, tx);
 					ArrayList<Component> takeCpu = capi.take(crefCpu, Arrays.asList(AnyCoordinator.newSelector(1)), MzsConstants.RequestTimeout.TRY_ONCE, tx);
 					cpuAmount--;
+					
 					//how many ram 
-					List<RamModule> takeRams;
+					List<RamModule> takeRams = null;
 					switch(ramAmount){
+						case 0:
+							break;
 						case 1:
 							takeRams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(1)), MzsConstants.RequestTimeout.TRY_ONCE, tx);
 							ramAmount--;
@@ -173,6 +176,7 @@ public class SpaceManufacturer implements NotificationListener {
 							ramAmount -= 4;
 							break;
 					}
+					log.info("Size of rams taken: %d, and size of remaining: %d\n", takeRams.size(), ramAmount);
 					ArrayList<Component> takeGpu = null;
 					//have gpu then take it else leave it
 					if(gpuAmount > 0){
@@ -180,8 +184,6 @@ public class SpaceManufacturer implements NotificationListener {
 						gpuAmount--;
 					}
 					
-					//commit transaction and build pc
-					capi.commitTransaction(tx);
 					if(takeGpu == null){
 						//ArrayList must have one element set it to null, for pc has no gpu
 						takeGpu = new ArrayList<Component>();
@@ -190,14 +192,18 @@ public class SpaceManufacturer implements NotificationListener {
 					pcs.add(new Computer(uuids.generate(), workerId, (Cpu) takeCpu.get(0), (Gpu) takeGpu.get(0), (Mainboard) takeMainboard.get(0), takeRams));
 				}
 			}
+			
 			//write the computers to space
 			for(Computer pc: pcs){
 				//mark them with untested
 				Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("untested"));
 				
-				capi.write(crefPc, MzsConstants.RequestTimeout.DEFAULT, null, entry);
+				capi.write(crefPc, MzsConstants.RequestTimeout.DEFAULT, tx, entry);
 				log.info("Worker: %s, build pc: %s", workerId, pc.id.toString());
-			} 
+			}
+			
+			//commit the transaction
+			capi.commitTransaction(tx);
 		}catch (SpaceException e) {
 			System.out.println("ERROR with message: "+ e.getMessage());
 			e.printStackTrace();
@@ -218,22 +224,23 @@ public class SpaceManufacturer implements NotificationListener {
 			Component component = (Component) ((Entry) components.get(0)).getValue();
 			TransactionReference tx = capi.createTransaction(5000, space);
 						
-			ArrayList<Cpu> cpus=null;
-			ArrayList<Mainboard> mainboards=null;
-			ArrayList<RamModule> rams=null;
-			ArrayList<Gpu> gpus=null;
+			ArrayList<Cpu> cpus				= null;
+			ArrayList<Mainboard> mainboards = null;
+			ArrayList<RamModule> rams		= null;
+			ArrayList<Gpu> gpus				= null;
 			
-			boolean create = false;
+			boolean create = true;
 
 			//find out what type of components we have
 			if(component instanceof Mainboard){
 				try {
-	                cpus = capi.take(crefCpu, Arrays.asList(AnyCoordinator.newSelector(1)),
-	                		         MzsConstants.RequestTimeout.ZERO, tx);
-	                mainboards = new ArrayList<Mainboard>();
-	                mainboards.add((Mainboard) component);
+	                cpus       = capi.take(crefCpu, Arrays.asList(AnyCoordinator.newSelector(1)),
+	                				MzsConstants.RequestTimeout.ZERO, tx);
+	                
+	                mainboards = capi.take(crefMainboards, Arrays.asList(FifoCoordinator.newSelector(1)), 
+	                				MzsConstants.RequestTimeout.ZERO, tx);
 	                try {
-	                	gpus = capi.take(crefGpu, Arrays.asList(AnyCoordinator.newSelector(1)),
+	                	gpus   = capi.take(crefGpu, Arrays.asList(AnyCoordinator.newSelector(1)),
        		         			 	 MzsConstants.RequestTimeout.ZERO, tx);
 	                } catch (MzsCoreException e) {
 		                /*no gpu available np gpu is not core component*/
@@ -242,40 +249,39 @@ public class SpaceManufacturer implements NotificationListener {
 		            }
 	                rams = capi.read(crefRam, Arrays.asList(AnyCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)),
            		         			 MzsConstants.RequestTimeout.ZERO, tx);
-	                create = true;
 				} catch (MzsCoreException e) {
 	                /*one core component missing do nothing*/
 	            	create = false;
 	            }
 			} else if(component instanceof Cpu){
 				try {
-	                cpus = new ArrayList<Cpu>();
-	                cpus.add((Cpu) component);
+	                cpus       = capi.take(crefCpu, Arrays.asList(AnyCoordinator.newSelector(1)),
+  		         					MzsConstants.RequestTimeout.ZERO, tx);
+
 	                mainboards = capi.take(crefMainboards, Arrays.asList(FifoCoordinator.newSelector(1)),
-           		         			 MzsConstants.RequestTimeout.ZERO, tx);
+           		         			MzsConstants.RequestTimeout.ZERO, tx);
 	                try {
-	                	gpus = capi.take(crefGpu, Arrays.asList(AnyCoordinator.newSelector(1)),
-       		         			 	 MzsConstants.RequestTimeout.ZERO, tx);
+	                	gpus   = capi.take(crefGpu, Arrays.asList(AnyCoordinator.newSelector(1)),
+       		         			 	MzsConstants.RequestTimeout.ZERO, tx);
 	                } catch (MzsCoreException e) {
 		                /*no gpu available np gpu is not core component*/
 	                	gpus = new ArrayList<Gpu>();
 	                	gpus.add(null);
 		            }
-	                rams = capi.read(crefRam, Arrays.asList(AnyCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)),
+	                rams       = capi.read(crefRam, Arrays.asList(AnyCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)),
            		         			 MzsConstants.RequestTimeout.ZERO, tx);
-	                create = true;
 	            } catch (MzsCoreException e) {
 	                /*one core component missing do nothing*/
 	            	create = false;
 	            }
 			} else if(component instanceof RamModule){
 				try {
-	                cpus = capi.take(crefCpu, Arrays.asList(AnyCoordinator.newSelector(1)),
+	                cpus       = capi.take(crefCpu, Arrays.asList(AnyCoordinator.newSelector(1)),
 	                				 MzsConstants.RequestTimeout.ZERO, tx);
 	                mainboards = capi.take(crefMainboards, Arrays.asList(FifoCoordinator.newSelector(1)),
            		         			 MzsConstants.RequestTimeout.ZERO, tx);
 	                try {
-	                	gpus = capi.take(crefGpu, Arrays.asList(AnyCoordinator.newSelector(1)),
+	                	gpus   = capi.take(crefGpu, Arrays.asList(AnyCoordinator.newSelector(1)),
        		         			 	 MzsConstants.RequestTimeout.ZERO, tx);
 	                } catch (MzsCoreException e) {
 		                /*no gpu available np gpu is not core component*/
@@ -284,16 +290,26 @@ public class SpaceManufacturer implements NotificationListener {
 		            }
 	                rams = capi.read(crefRam, Arrays.asList(AnyCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)),
            		         			 MzsConstants.RequestTimeout.ZERO, tx);
-	                create = true;
 	            } catch (MzsCoreException e) {
 	                /*one core component missing do nothing*/
 	            	create = false;
+	            	capi.rollbackTransaction(tx);
 	            }
-			} 
+			} else if (component instanceof Gpu){
+				//do nothing, gpu is not a core component
+				return;
+			} else {
+				/*
+				 * this is when no type of component is found.
+				 * this should never be the case
+				 */
+				create = false;
+				throw new SpaceException("Item is not of type Component");
+			}
 			
 			if(create){
 				//build the pc
-				Computer pc=null;		
+				Computer pc = null;		
 				switch(rams.size()){
 					case 0:
 						capi.rollbackTransaction( tx );
@@ -311,25 +327,25 @@ public class SpaceManufacturer implements NotificationListener {
 						rams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(4)), MzsConstants.RequestTimeout.ZERO, tx);
 						break;
 				}
-				
-				//commit Transaction and build pc if possible
-				capi.commitTransaction(tx);
-				
+
 				//assemble pc
 				pc = new Computer(uuids.generate(), workerId, cpus.get(0), gpus.get(0), mainboards.get(0), rams);
 
 				//label as untested
 				Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("untested"));
 				//write to space
-				capi.write(crefPc, MzsConstants.RequestTimeout.DEFAULT, null, entry);
+				capi.write(crefPc, MzsConstants.RequestTimeout.DEFAULT, tx, entry);
+				
+				//commit Transaction and build pc if possible
+				capi.commitTransaction(tx);
+				
 				log.info("Worker: %s, Pc build with id: %s", workerId, pc.id.toString());
 			}
         } catch (MzsCoreException e) {
         	log.info("Worker: %s, could not build Pc", workerId);
             e.printStackTrace();
         } catch (SpaceException e) {
-        	//delete later
-			e.printStackTrace();
+        	log.info("SpaceException! %s", e.getMessage());
 		}
 	}
 }

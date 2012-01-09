@@ -1,10 +1,7 @@
 package tu.space.worker;
 
-import java.net.URI;
 import java.util.Random;
 import java.util.UUID;
-
-import org.mozartspaces.core.Capi;
 
 import tu.space.components.Component;
 import tu.space.utils.UUIDGenerator;
@@ -15,7 +12,7 @@ import tu.space.utils.UUIDGenerator;
  *
  * @author raunig stefan
 **/
-public abstract class Producer extends SpaceEvent implements Runnable {
+public abstract class Producer implements Runnable {
 	
 	private Thread thread;
 	
@@ -23,8 +20,7 @@ public abstract class Producer extends SpaceEvent implements Runnable {
 	private int quantity;
 	private double errorRate;
 	
-	public Producer(final String workerId, final double errorRate, final String component, final int quantity, final Capi capi){
-		super(capi);
+	public Producer(final String workerId, final double errorRate, final String component, final int quantity){
 		this.workerId = workerId;
 		this.errorRate = errorRate;
 		this.component = component;
@@ -52,9 +48,13 @@ public abstract class Producer extends SpaceEvent implements Runnable {
 			 * The production needs time, here we simulate
 			 * a working period between 1-3 sec.
 			 */
-			Random rand = new Random(12345);		
+			Random rand = new Random();		
 			try {
-				Thread.sleep(rand.nextLong() % 3001);
+//				Thread.sleep(rand.nextInt(3000));
+				/**
+				 * DEBUG producing at higher rate
+				 */
+				Thread.sleep(rand.nextInt(500));
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}

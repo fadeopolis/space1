@@ -3,6 +3,7 @@ package tu.space.worker;
 
 import java.io.Serializable;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -13,6 +14,7 @@ import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.Entry;
 import org.mozartspaces.core.MzsConstants;
+import org.mozartspaces.core.TransactionReference;
 import org.mozartspaces.core.MzsConstants.RequestTimeout;
 import org.mozartspaces.core.MzsCore;
 import org.mozartspaces.core.MzsCoreException;
@@ -105,9 +107,12 @@ public class SpaceTester implements NotificationListener {
 	 */
 	protected void check(final Computer computer){
 		try {
+			//transaction
+			TransactionReference tx = capi.createTransaction(5000, space);
+			
 			//take pcs from space marked untested
 			if(computer == null){
-				pcs = capi.take(crefPc, Arrays.asList(LabelCoordinator.newSelector("untested", MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO, null);
+				pcs = capi.take(crefPc, Arrays.asList(LabelCoordinator.newSelector("untested", MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO, tx);
 			} else {
 				pcs = Arrays.asList(computer);
 			}
@@ -115,17 +120,22 @@ public class SpaceTester implements NotificationListener {
 				if(pc.isComplete()){
 					//check if pc is complete
 					pc = pc.tagAsTestedForCompleteness(workerId, TestStatus.YES);
-					Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("testedCompleteness"));	
-					capi.write(crefPc, RequestTimeout.DEFAULT, null, entry);
-					log.info("Tester: %s, tested completeness of Pc: %s, result okay", workerId, pc.id.toString());
 				} else {
-					//move to trash
-					pc = pc.tagAsTestedForCompleteness(workerId, TestStatus.YES);
-					Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("testedError"));
-					capi.write(crefPc, RequestTimeout.DEFAULT, null, entry);
-					log.info("Tester: %s, tested completeness of Pc: %s, result uncomplete", workerId, pc.id.toString());
+					pc = pc.tagAsTestedForCompleteness(workerId, TestStatus.NO);
 				}
+				
+				Entry entry;
+				if(pc.defect == TestStatus.UNTESTED) {
+					entry = new Entry(pc, LabelCoordinator.newCoordinationData("untested"));
+				} else {
+					entry = new Entry(pc, LabelCoordinator.newCoordinationData("tested"));
+				}
+				capi.write(crefPc, RequestTimeout.DEFAULT, tx, entry);
+				log.info("Tester: %s, tested completeness of Pc: %s, result okay", workerId, pc.id.toString());
+				
 			}
+			
+			capi.commitTransaction(tx);
 		} catch (MzsCoreException e) {
 			log.info("Tester: %s could not test pc.", workerId);
 			e.printStackTrace();
@@ -136,7 +146,15 @@ public class SpaceTester implements NotificationListener {
 	public void entryOperationFinished(Notification arg0, Operation arg1, List<? extends Serializable> entries) {		
 		Entry entry = (Entry) entries.get(0);
 		if(((LabelData) entry.getCoordinationData().get(0)).getLabel().equals("untested")){
-			check((Computer) entry.getValue());
+			Computer pc = (Computer) entry.getValue();
+			if(pc.complete == TestStatus.UNTESTED) {
+				try {
+					ArrayList<Serializable> pcs = capi.take(crefPc, Arrays.asList(LabelCoordinator.newSelector("untested", 1)), MzsConstants.RequestTimeout.ZERO, null);
+					check((Computer) pcs.get(0));
+				} catch (MzsCoreException e) {
+					//do nothing
+				}
+			}
 		}
 	}
 }

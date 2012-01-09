@@ -152,7 +152,7 @@ public abstract class ContainerCreator{
 	 * @param space
 	 * @param capi
 	 * @return cref
-	 * 				Container for Mainboards
+	 *
 	 * @throws MzsCoreException
 	 */
 	public static ContainerReference getPcDefectContainer(final URI space, final Capi capi) throws MzsCoreException{
@@ -171,31 +171,15 @@ public abstract class ContainerCreator{
 	}
 	
 	/**
-	 * This container holds defect Pc's, it will be looked up if created, else 
-	 * it will be created.
+	 * 
+	 * Tis is the end storage, every pc is tagged finished
 	 * 
 	 * @param space
 	 * @param capi
 	 * @return cref
-	 * 				Container for Mainboards
+	 * 
 	 * @throws MzsCoreException
 	 */
-	public static ContainerReference getEventContainer(final URI space, final Capi capi) throws MzsCoreException{
-		ContainerReference cref;
-		try {
-			//Log lookup for Container named CpuContainer
-			cref = capi.lookupContainer("SpaceEvent", space, RequestTimeout.DEFAULT, null);
-		} catch (MzsCoreException e) {
-			//Log not found create it
-			List<FifoCoordinator> oblicoord = new ArrayList<FifoCoordinator>();
-			oblicoord.add(new FifoCoordinator());
-			//Default coordinator is FIFOCoordinator
-			cref = capi.createContainer("SpaceEvent", space, Container.UNBOUNDED, oblicoord, null, null);
-		}
-		return cref;
-	}
-
-	
 	public static ContainerReference getStorageContainer(final URI space, final Capi capi) throws MzsCoreException{
 		ContainerReference cref;
 		try {

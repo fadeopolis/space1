@@ -86,7 +86,7 @@ public final class Computer implements Serializable {
 		return new Computer(
 				id, manufacturerId, defectTesterId, completenessTesterId, logisticianId, 
 				cpu, gpu, mainboard, ramModules,
-				defect, complete, finished
+				defect, complete, true
 		);
 	}
 	

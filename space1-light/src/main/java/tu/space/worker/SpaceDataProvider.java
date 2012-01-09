@@ -30,88 +30,54 @@ import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
 import tu.space.gui.DataProvider;
 import tu.space.util.ContainerCreator;
-import tu.space.utils.SpaceException;
 
 public class SpaceDataProvider implements DataProvider {
-	public SpaceDataProvider() {
-		
-	}
+	
+	private final MzsCore core  = DefaultMzsCore.newInstance(0);
+	private final Capi    capi  = new Capi(core);
+	private final URI     space = URI.create("xvsm://localhost:9877");	
+	
+	public SpaceDataProvider() {}
 	
 	@Override
 	public TableModel cpus() throws Exception {
-		MzsCore core = DefaultMzsCore.newInstance(0);
-		Capi    capi = new Capi(core);
-		URI     space = URI.create("xvsm://localhost:9877");			
-
 		ContainerReference cref = ContainerCreator.getCpuContainer( space, capi );
-		
 		return new SpaceTableModel(Cpu.class, core, cref );
 	}
 
 	@Override
 	public TableModel gpus() throws Exception{
-		MzsCore core = DefaultMzsCore.newInstance(0);
-		Capi    capi = new Capi(core);
-		URI     space = URI.create("xvsm://localhost:9877");			
-
 		ContainerReference cref = ContainerCreator.getGpuContainer( space, capi );
-		
 		return new SpaceTableModel(Gpu.class, core, cref );
 	}
 
 	@Override
 	public TableModel mainboards() throws Exception {
-		MzsCore core = DefaultMzsCore.newInstance(0);
-		Capi    capi = new Capi(core);
-		URI     space = URI.create("xvsm://localhost:9877");			
-
-		ContainerReference cref = ContainerCreator.getMainboardContainer( space, capi );
-		
+		ContainerReference cref = ContainerCreator.getMainboardContainer( space, capi );	
 		return new SpaceTableModel(Mainboard.class, core, cref );
-
 	}
 
 	@Override
 	public TableModel ramModules() throws Exception {
-		MzsCore core = DefaultMzsCore.newInstance(0);
-		Capi    capi = new Capi(core);
-		URI     space = URI.create("xvsm://localhost:9877");			
-
 		ContainerReference cref = ContainerCreator.getRamContainer( space, capi );
-		
 		return new SpaceTableModel(RamModule.class, core, cref );
 	}
 
 	@Override
 	public TableModel computers() throws Exception {
-		MzsCore core = DefaultMzsCore.newInstance(0);
-		Capi    capi = new Capi(core);
-		URI     space = URI.create("xvsm://localhost:9877");			
-
 		ContainerReference cref = ContainerCreator.getPcContainer( space, capi );
-		
 		return new SpaceTableModel(Computer.class, core, cref );
 	}
 
 	@Override
 	public TableModel storage() throws Exception {
-		MzsCore core = DefaultMzsCore.newInstance(0);
-		Capi    capi = new Capi(core);
-		URI     space = URI.create("xvsm://localhost:9877");			
-
 		ContainerReference cref = ContainerCreator.getStorageContainer( space, capi );
-		
 		return new SpaceTableModel(Computer.class, core, cref );
 	}
 
 	@Override
 	public TableModel trash() throws Exception {
-		MzsCore core = DefaultMzsCore.newInstance(0);
-		Capi    capi = new Capi(core);
-		URI     space = URI.create("xvsm://localhost:9877");			
-
-		ContainerReference cref = ContainerCreator.getPcDefectContainer( space, capi );
-		
+		ContainerReference cref = ContainerCreator.getPcDefectContainer( space, capi );	
 		return new SpaceTableModel(Computer.class, core, cref );
 	}
 
@@ -152,35 +118,37 @@ public class SpaceDataProvider implements DataProvider {
 				@Override
 				public void entryOperationFinished( Notification source,
 						Operation operation, List<? extends Serializable> entries ) {
-					Serializable s = entries.get( 0 );
 					
-					if ( s instanceof Entry )
-						s = ((Entry) s).getValue(); 
+					for(Serializable comp: entries){
+						if ( comp instanceof Entry ){
+							comp = ((Entry) comp).getValue(); 
+						}
 					
-					data.add( s );
-					SpaceTableModel.this.fireTableRowsInserted( 0, getRowCount() );
-					
+						data.add( comp );
+						SpaceTableModel.this.fireTableRowsInserted( 0, getRowCount() );
+						}
 					}
-				},
-				Operation.WRITE
+				}
+			
+			, Operation.WRITE
 			);
+			
 			nManager.createNotification( cref, new NotificationListener() {
 				@Override
 				public void entryOperationFinished( Notification source,
 						Operation operation, List<? extends Serializable> entries ) {
-					Serializable s = entries.get( 0 );
 					
-					if ( s instanceof Entry )
-						s = ((Entry) s).getValue(); 
+					for(Serializable comp: entries){
 					
-					data.remove( s );
-					SpaceTableModel.this.fireTableRowsDeleted( 0, getRowCount() );
+						if ( comp instanceof Entry ) comp = ((Entry) comp).getValue(); 
+						
+						data.remove( comp );
+						SpaceTableModel.this.fireTableRowsDeleted( 0, getRowCount() );
+					}
 				}
-				},
-				Operation.TAKE
+			}
+			, Operation.TAKE
 			);
-			
-			//read all
 		}
 		
 		@Override

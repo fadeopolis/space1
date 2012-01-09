@@ -1,6 +1,8 @@
 package tu.space.worker;
 
 
+import java.net.URI;
+
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.DefaultMzsCore;
@@ -35,37 +37,11 @@ public class SpaceProducer extends Producer {
 
 	private final MzsCore core;
 	private Capi capi;
-//	private URI space = URI.create("xvsm://localhost:9877");
+	private URI space = URI.create("xvsm://localhost:9877");
 	public static final String USAGE = 
 			"usage: producer ID TYPE QUOTA ERROR_RATE\n"      +
-			"  where TYPE is one of CPU, GPU, MAINBOARD, RAM"
-	;
-		
-//	public static void main(String[] args) throws SpaceException {
-//		//test main
-//		Logger.configure();
-//
-//		if ( args.length != 4 ) {
-//			System.err.println( USAGE );
-//			System.exit( 1 );
-//		}
-//		final String id        = args[0];
-//		final int    quota     = Integer.parseInt( args[2] );
-//		final double errorRate = Double.parseDouble( args[3] );
-//		
-//		if ( "CPU".equalsIgnoreCase( args[1] ) )            {}			
-//		else if ( "GPU".equalsIgnoreCase( args[1] ) )       {} 
-//		else if ( "MAINBOARD".equalsIgnoreCase( args[1] ) ) {}
-//		else if ( "RAM".equalsIgnoreCase( args[1] ) )       {}
-//		else {
-//			System.err.println( USAGE );
-//			System.exit( 1 );
-//			return;
-//		}
-//		
-//		make( id, errorRate, args[1].toLowerCase(), quota ).start();
-//	}
-	
+			"  where TYPE is one of CPU, GPU, MAINBOARD, RAM";
+			
 	public static SpaceProducer make(final String workerId, final double errorRate, final String component, final int quantity) {
 		MzsCore core = DefaultMzsCore.newInstance( 0 );
 		Capi    capi = new Capi(core);
@@ -75,7 +51,7 @@ public class SpaceProducer extends Producer {
 	public SpaceProducer(
 			final String workerId, final double errorRate, final String component, final int quantity, 
 			MzsCore core, Capi capi ) {
-		super(workerId, errorRate, component, quantity, capi);
+		super(workerId, errorRate, component, quantity);
 		this.workerId = workerId;
 		this.capi = capi;
 		this.core = core;

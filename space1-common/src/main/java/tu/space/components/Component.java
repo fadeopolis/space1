@@ -16,8 +16,8 @@ public abstract class Component implements Serializable {
 	public final boolean hasDefect;
 	
 	public Component( UUID id, String producerId, boolean isFaulty ) {
-		this.id         = id;
-		this.producerId = producerId;
+		this.id          = id;
+		this.producerId  = producerId;
 		this.hasDefect   = isFaulty;
 	}
 	
