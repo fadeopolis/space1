@@ -47,9 +47,6 @@ public abstract class ContainerCreator{
 	public static AnySelector any( int i ) {
 		return AnyCoordinator.newSelector( i );
 	}
-	public static final AnySelector SELECT_1   = AnyCoordinator.newSelector( 1 );
-	public static final AnySelector SELECT_2   = AnyCoordinator.newSelector( 2 );
-	public static final AnySelector SELECT_4   = AnyCoordinator.newSelector( 4 );
 	public static final AnySelector ANY_MAX = AnyCoordinator.newSelector( AnySelector.COUNT_MAX );
 
 	public static FifoSelector fifo( int i ) {
@@ -58,7 +55,7 @@ public abstract class ContainerCreator{
 		
 	public static final FifoSelector FIFO_MAX = FifoCoordinator.newSelector( FifoSelector.COUNT_MAX );
 	
-	public static final int DEFAULT_TX_TIMEOUT = 5000;
+	public static final int DEFAULT_TX_TIMEOUT = 99999999; // set very high for debugging
 	
 	private static final int    DEFAULT_SPACE_PORT = 9877;
 	private static final String DEFAULT_SPACE_URI = "xvsm://localhost:";
