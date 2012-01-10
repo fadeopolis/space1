@@ -131,6 +131,18 @@ public abstract class ContainerCreator{
 	}
 	
 	/**
+	 * Storage for orders, as every factory has to carry out orders
+	 * 
+	 * @param space
+	 * @param capi
+	 * @return
+	 * @throws MzsCoreException
+	 */
+	public static ContainerReference getOrderContainer( final URI space, final Capi capi ) throws MzsCoreException{
+		return getContainer( capi, space, "OrderContainer", new FifoCoordinator() );
+	}
+	
+	/**
 	 * This container holds Pc's, it will be looked up if created, else 
 	 * it will be created.
 	 * 

@@ -1,10 +1,20 @@
 package tu.space.building;
 
+import java.io.Serializable;
+import java.net.URI;
+import java.util.List;
+
 import org.mozartspaces.core.Capi;
+import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.MzsCore;
+import org.mozartspaces.core.MzsCoreException;
+import org.mozartspaces.notifications.Notification;
+import org.mozartspaces.notifications.NotificationListener;
+import org.mozartspaces.notifications.Operation;
 
 import tu.space.gui.Browser;
+import tu.space.util.ContainerCreator;
 import tu.space.utils.Logger;
 import tu.space.utils.UUIDGenerator;
 import tu.space.provider.SpaceDataProvider;
@@ -18,10 +28,13 @@ import ch.qos.logback.classic.BasicConfigurator;
  * @author Raunig Stefan
  */
 
-public class Factory {
+public class Factory implements NotificationListener{
 
 	private final String factoryId;	
 	private final Logger log = Logger.make(getClass());
+	
+	private final Capi capi;
+	private ContainerReference crefOrder;
 	
 	public String factorySpace = "xvsm://localhost:";
 	
@@ -42,10 +55,14 @@ public class Factory {
 		
 		//embedded space on localhost given port
 		MzsCore core = DefaultMzsCore.newInstance(port);
-		new Capi(core);
+		capi = new Capi(core);
+		
+		try {
+			crefOrder = ContainerCreator.getOrderContainer(URI.create(factorySpace), capi);
+		} catch (MzsCoreException e) {
+			log.error("Lookup of order container failed");
+		}
 	}
-	
-
 
 	/**
 	 * Main
@@ -88,5 +105,10 @@ public class Factory {
 	 */
 	public String getFactorySpace() {
 		return factorySpace;
+	}
+
+	@Override
+	public void entryOperationFinished(Notification source, Operation operation, List<? extends Serializable> entries) {
+		//do stuff with new orders
 	}
 }
