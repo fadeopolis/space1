@@ -10,9 +10,10 @@ public class Server {
 
 	/**
 	 * 
-	 * TEST SERVER
+	 * SERVER creates space for bsp1
 	 * @param args
 	 */
+	@Deprecated
 	public static void main(String[] args) {
 		BasicConfigurator.configureDefaultContext();
 		

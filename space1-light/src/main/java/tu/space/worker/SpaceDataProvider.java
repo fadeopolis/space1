@@ -7,6 +7,7 @@ import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 import java.util.Vector;
 
 import javax.swing.table.AbstractTableModel;
@@ -35,9 +36,28 @@ public class SpaceDataProvider implements DataProvider {
 	
 	private final MzsCore core  = DefaultMzsCore.newInstance(0);
 	private final Capi    capi  = new Capi(core);
-	private final URI     space = URI.create("xvsm://localhost:9877");	
+	private final URI     space;	
 	
-	public SpaceDataProvider() {}
+	private final String factoryId;
+	
+	/**
+	 * Constructor for bsp1 default on port 9877
+	 */
+	public SpaceDataProvider() {
+		this.factoryId = "NoID";
+		space = URI.create("xvsm://localhost:9877");
+	}
+	
+	/**
+	 * Constructor
+	 * 
+	 * @param factoryId
+	 * @param factorySpace
+	 */
+	public SpaceDataProvider(final String factoryId, final String factorySpace){
+		this.factoryId = factoryId;
+		space = URI.create(factorySpace);
+	}
 	
 	@Override
 	public TableModel cpus() throws Exception {
