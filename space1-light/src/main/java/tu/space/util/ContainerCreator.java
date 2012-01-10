@@ -6,6 +6,7 @@ import java.util.Arrays;
 import org.mozartspaces.capi3.AnyCoordinator;
 import org.mozartspaces.capi3.Coordinator;
 import org.mozartspaces.capi3.FifoCoordinator;
+import org.mozartspaces.capi3.FifoCoordinator.FifoSelector;
 import org.mozartspaces.capi3.LabelCoordinator;
 import org.mozartspaces.capi3.AnyCoordinator.AnySelector;
 import org.mozartspaces.capi3.LabelCoordinator.LabelData;
@@ -42,11 +43,19 @@ public abstract class ContainerCreator{
 	public static final LabelSelector SELECTOR_DEFECT                    = selector( STR_DEFECT                    );
 	public static final LabelSelector SELECTOR_INCOMPlETE                = selector( STR_INCOMPLETE                );
 	public static final LabelSelector SELECTOR_OK                        = selector( STR_OK                        );
-
+	
+	public static AnySelector any( int i ) {
+		return AnyCoordinator.newSelector( 1 );
+	}
 	public static final AnySelector SELECT_1   = AnyCoordinator.newSelector( 1 );
-	public static final AnySelector SELECT_2   = AnyCoordinator.newSelector( 1 );
-	public static final AnySelector SELECT_4   = AnyCoordinator.newSelector( 1 );
-	public static final AnySelector SELECT_MAX = AnyCoordinator.newSelector( AnySelector.COUNT_MAX );
+	public static final AnySelector SELECT_2   = AnyCoordinator.newSelector( 2 );
+	public static final AnySelector SELECT_4   = AnyCoordinator.newSelector( 4 );
+	public static final AnySelector ANY_MAX = AnyCoordinator.newSelector( AnySelector.COUNT_MAX );
+
+	public static FifoSelector fifo( int i ) {
+		return FifoCoordinator.newSelector( i );
+	}
+	public static final FifoSelector FIFO_MAX = FifoCoordinator.newSelector( FifoSelector.COUNT_MAX );
 	
 	public static final int DEFAULT_TX_TIMEOUT = 5000;
 	
@@ -92,7 +101,7 @@ public abstract class ContainerCreator{
 	 * @throws MzsCoreException
 	 */
 	public static ContainerReference getGpuContainer( final URI space, final Capi capi ) throws MzsCoreException{
-		return getContainer( capi, space, "CpuContainer", new FifoCoordinator() );
+		return getContainer( capi, space, "GpuContainer", new FifoCoordinator() );
 	}
 	
 	/**
@@ -168,10 +177,10 @@ public abstract class ContainerCreator{
 	private static ContainerReference getContainer( Capi capi, URI space, String name, Coordinator... cs ) throws MzsCoreException {
 		try {
 			// try looking up container
-			return capi.lookupContainer("Storage", space, RequestTimeout.DEFAULT, null);
+			return capi.lookupContainer( name, space, RequestTimeout.DEFAULT, null);
 		} catch (MzsCoreException e) {
 			// lookup failed, create container
-			return capi.createContainer("Storage", space, Container.UNBOUNDED, Arrays.asList( cs ), null, null);
+			return capi.createContainer( name, space, Container.UNBOUNDED, Arrays.asList( cs ), null, null);
 		}
 	}
 

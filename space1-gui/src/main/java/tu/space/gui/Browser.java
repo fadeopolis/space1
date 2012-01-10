@@ -33,6 +33,7 @@ import tu.space.components.RamModule;
 import tu.space.utils.Logger;
 
 public class Browser {
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public Browser( final DataProvider data ) throws Exception {
 		Logger.configure();
 		
@@ -67,7 +68,6 @@ public class Browser {
 			public void actionPerformed( ActionEvent e ) {
 				String uuid = UUID.randomUUID().toString().substring( 0, 8 );
 				
-				@SuppressWarnings("unchecked")
 				Class<? extends Component> type      = (Class<? extends Component>) componentType.getSelectedItem();
 				int                        quota     = (Integer) quotaModel.getValue();
 				double                     errorRate = (Double)  errorRateModel.getValue();

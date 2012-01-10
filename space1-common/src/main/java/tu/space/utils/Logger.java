@@ -6,6 +6,7 @@ import org.apache.log4j.PatternLayout;
 
 public class Logger {
 	public static void configure() {
+		// configure log4j
 		org.apache.log4j.Logger root = org.apache.log4j.Logger.getRootLogger();
 	    root.addAppender( 
 	    	new ConsoleAppender( 

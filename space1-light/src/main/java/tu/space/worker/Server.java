@@ -4,7 +4,9 @@ import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.MzsCore;
 
-import ch.qos.logback.classic.BasicConfigurator;
+import tu.space.util.LogBack;
+import tu.space.utils.Logger;
+import ch.qos.logback.classic.Level;
 
 public class Server {
 
@@ -15,7 +17,8 @@ public class Server {
 	 */
 	@Deprecated
 	public static void main(String[] args) {
-		BasicConfigurator.configureDefaultContext();
+		Logger.configure();
+		LogBack.configure( Level.INFO );
 		
 		//embedded space on localhost port 9877
 		MzsCore core = DefaultMzsCore.newInstance(9877);

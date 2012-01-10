@@ -1,7 +1,5 @@
 package tu.space.light;
 
-import java.io.Serializable;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -12,15 +10,10 @@ import org.mozartspaces.capi3.FifoCoordinator;
 import org.mozartspaces.capi3.LabelCoordinator;
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
-import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.Entry;
 import org.mozartspaces.core.MzsConstants;
-import org.mozartspaces.core.MzsCore;
 import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.core.TransactionReference;
-import org.mozartspaces.notifications.Notification;
-import org.mozartspaces.notifications.NotificationListener;
-import org.mozartspaces.notifications.NotificationManager;
 import org.mozartspaces.notifications.Operation;
 
 import tu.space.components.Component;
@@ -30,6 +23,7 @@ import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
 import tu.space.util.ContainerCreator;
+import tu.space.util.LogBack;
 import tu.space.utils.Logger;
 import tu.space.utils.SpaceException;
 import tu.space.utils.UUIDGenerator;
@@ -80,6 +74,7 @@ public class Manufacturer extends Processor<Component> {
 	 */
 	public static void main(String[] args) throws MzsCoreException {
 		Logger.configure();
+		LogBack.configure();
 		
 		Manufacturer mySm = new Manufacturer(args);
 
@@ -96,7 +91,7 @@ public class Manufacturer extends Processor<Component> {
 		List<Computer> pcs = new ArrayList<Computer>();
 		try{
 			//crate transaction
-			TransactionReference tx = capi.createTransaction(5000, space);
+			TransactionReference tx = capi.createTransaction(500000, space);
 		
 			/*
 			 * read all entries of mainboard to decide how many pc's we can build
@@ -116,9 +111,9 @@ public class Manufacturer extends Processor<Component> {
 					
 			for(int i=0;i<=readMainboards.size()-cpuAmount;i++){
 				if(once){
-					ArrayList<Component> readcpus = capi.read(crefMainboards, Arrays.asList(FifoCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO , tx);
-					ArrayList<Component> readram = capi.read(crefRam, Arrays.asList(AnyCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO, tx);
-					ArrayList<Component> readgpu = capi.read(crefGpu, Arrays.asList(AnyCoordinator.newSelector(MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO, tx);
+					ArrayList<Component> readcpus = capi.read(crefMainboards, FIFO_MAX, RequestTimeout.ZERO , tx);
+					ArrayList<Component> readram = capi.read(crefRam, FIFO_MAX, RequestTimeout.ZERO, tx);
+					ArrayList<Component> readgpu = capi.read(crefGpu, FIFO_MAX, RequestTimeout.ZERO, tx);
 					cpuAmount = readcpus.size();
 					ramAmount = readram.size();
 					gpuAmount = readgpu.size();
@@ -128,8 +123,8 @@ public class Manufacturer extends Processor<Component> {
 				// as long as mainboard cpu and ram is available build a pc
 				if(cpuAmount > 0 && ramAmount > 0){				
 					//take mainboard and cpu
-					ArrayList<Component> takeMainboard = capi.take(crefMainboards, Arrays.asList(FifoCoordinator.newSelector(1)), MzsConstants.RequestTimeout.TRY_ONCE, tx);
-					ArrayList<Component> takeCpu = capi.take(crefCpu, Arrays.asList(AnyCoordinator.newSelector(1)), MzsConstants.RequestTimeout.TRY_ONCE, tx);
+					ArrayList<Component> takeMainboard = capi.take(crefMainboards, fifo(1), MzsConstants.RequestTimeout.TRY_ONCE, tx);
+					ArrayList<Component> takeCpu = capi.take(crefCpu, fifo(1), MzsConstants.RequestTimeout.TRY_ONCE, tx);
 					cpuAmount--;
 					
 					//how many ram 
@@ -138,21 +133,21 @@ public class Manufacturer extends Processor<Component> {
 						case 0:
 							break;
 						case 1:
-							takeRams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(1)), MzsConstants.RequestTimeout.TRY_ONCE, tx);
+							takeRams = capi.take(crefRam, fifo(1), RequestTimeout.TRY_ONCE, tx);
 							ramAmount--;
 							break;
 						case 2:
-							takeRams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(2)), MzsConstants.RequestTimeout.TRY_ONCE, tx);
+							takeRams = capi.take(crefRam, fifo(2), RequestTimeout.TRY_ONCE, tx);
 							ramAmount -= 2;
 							break;
 						case 3:
 							//3 is one to much take 2
-							takeRams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(2)), MzsConstants.RequestTimeout.TRY_ONCE, tx);
+							takeRams = capi.take(crefRam, fifo(2), RequestTimeout.TRY_ONCE, tx);
 							ramAmount -= 2;
 							break;
 						default :
 							//well we have 4 or more then let us take 4
-							takeRams = capi.take(crefRam, Arrays.asList(AnyCoordinator.newSelector(4)), MzsConstants.RequestTimeout.TRY_ONCE, tx);
+							takeRams = capi.take(crefRam, fifo(4), RequestTimeout.TRY_ONCE, tx);
 							ramAmount -= 4;
 							break;
 					}
@@ -160,7 +155,7 @@ public class Manufacturer extends Processor<Component> {
 					ArrayList<Component> takeGpu = null;
 					//have gpu then take it else leave it
 					if(gpuAmount > 0){
-						takeGpu = capi.take(crefGpu, Arrays.asList(AnyCoordinator.newSelector(1)), MzsConstants.RequestTimeout.TRY_ONCE, tx);
+						takeGpu = capi.take(crefGpu, fifo(1), MzsConstants.RequestTimeout.TRY_ONCE, tx);
 						gpuAmount--;
 					}
 					
@@ -214,19 +209,19 @@ public class Manufacturer extends Processor<Component> {
 	private void buildPc( TransactionReference tx ) throws MzsCoreException {
 		try {
 			// mandatory take parts
-			Cpu cpu       = (Cpu) capi.take( crefCpu, SELECT_1, RequestTimeout.ZERO, tx ).get( 0 );
-			Mainboard mbd = (Mainboard) capi.take( crefMainboards, SELECT_1, RequestTimeout.ZERO, tx ).get( 0 );
+			Cpu cpu       = (Cpu) capi.take( crefCpu, fifo(1), RequestTimeout.ZERO, tx ).get( 0 );
+			Mainboard mbd = (Mainboard) capi.take( crefMainboards, fifo(1), RequestTimeout.ZERO, tx ).get( 0 );
 
 			// optional parts
 			Gpu gpu;
 			try {
-				gpu = (Gpu) capi.take( crefGpu, SELECT_1, RequestTimeout.ZERO, tx ).get( 0 );			
+				gpu = (Gpu) capi.take( crefGpu, fifo(1), RequestTimeout.ZERO, tx ).get( 0 );			
 			} catch ( MzsCoreException e ) {
 				gpu = null;
 			}
 		
 			// ram is a bitch
-			int numRams = capi.test( crefRam, SELECT_MAX, RequestTimeout.ZERO, tx );
+			int numRams = capi.test( crefRam, FIFO_MAX, RequestTimeout.ZERO, tx );
 		
 			List<RamModule> ram;
 			switch ( numRams ) {
@@ -234,10 +229,13 @@ public class Manufacturer extends Processor<Component> {
 					capi.rollbackTransaction( tx );
 				case 1:
 				case 2:
-				case 4:
-					ram = capi.take( crefRam, AnyCoordinator.newSelector( numRams ), RequestTimeout.ZERO, tx );
+					ram = capi.take( crefRam, fifo( numRams ), RequestTimeout.ZERO, tx );
+				// if 3, take 2
+				case 3:
+					ram = capi.take( crefRam, fifo( 2 ), RequestTimeout.ZERO, tx );
+				// if 4 or more, take 4
 				default:
-					ram = capi.take( crefRam, SELECT_4, RequestTimeout.ZERO, tx );				
+					ram = capi.take( crefRam, fifo(4), RequestTimeout.ZERO, tx );				
 			}
 		
 			//assemble pc
@@ -252,8 +250,8 @@ public class Manufacturer extends Processor<Component> {
 			capi.commitTransaction( tx );
 		} catch ( MzsCoreException e ) {
 			rollback( tx );
-        	log.info("Worker: %s, could not build Pc", workerId);
-        	e.printStackTrace();
+//        	log.info("Worker: %s, could not build Pc", workerId);
+//        	e.printStackTrace();
 		}
 	}
 }

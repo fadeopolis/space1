@@ -32,8 +32,11 @@ import tu.space.components.RamModule;
 import tu.space.gui.DataProvider;
 import tu.space.util.ContainerCreator;
 
+import tu.space.light.Producer;
+
 public class SpaceDataProvider implements DataProvider {
 	
+	private final int     port  = 9877;
 	private final MzsCore core  = DefaultMzsCore.newInstance(0);
 	private final Capi    capi  = new Capi(core);
 	private final URI     space;	
@@ -111,15 +114,23 @@ public class SpaceDataProvider implements DataProvider {
 	}
 	
 	@Override
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void startProducer( String id, Class<? extends Component> type, int quota, double errorRate ) {
 		try {
-			String msg;
-			if(type.getSimpleName().toLowerCase().equals("rammodule")){
-				msg = "ram";
-			} else {
-				msg = type.getSimpleName().toLowerCase();
+			ContainerReference cref = null;
+			if ( type == Cpu.class ) {
+				cref = ContainerCreator.getCpuContainer( space, capi );
+			} else if ( type == Gpu.class ) {
+				cref = ContainerCreator.getGpuContainer( space, capi );
+			} else if ( type == Mainboard.class ) {
+				cref = ContainerCreator.getMainboardContainer( space, capi );
+			} else if ( type == RamModule.class ) {
+				cref = ContainerCreator.getRamContainer( space, capi );
 			}
-			SpaceProducer.make(id, errorRate, msg, quota).start();
+			
+			new Thread(
+				new Producer( id, capi, port, quota, errorRate, Component.makeFactory( type ), cref )
+			).start();
 		} catch ( Exception e ) {
 			e.printStackTrace();
 		}
