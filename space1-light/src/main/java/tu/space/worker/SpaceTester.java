@@ -36,6 +36,7 @@ import tu.space.utils.SpaceException;
  * 
  * @author raunig stefan
  */
+@Deprecated
 public class SpaceTester implements NotificationListener {
 
 	protected final Logger log = Logger.make(getClass());

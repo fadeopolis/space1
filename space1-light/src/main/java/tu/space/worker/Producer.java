@@ -60,7 +60,7 @@ public abstract class Producer implements Runnable {
 
 			//Component to be produced		
 			Component.Factory<?> factory;
-			if ( "CPU".equalsIgnoreCase( component ) )            factory = new Component.CpuFactory();
+			if (      "CPU".equalsIgnoreCase( component ) )       factory = new Component.CpuFactory();
 			else if ( "GPU".equalsIgnoreCase( component ) )       factory = new Component.GpuFactory();
 			else if ( "MAINBOARD".equalsIgnoreCase( component ) ) factory = new Component.MainboardFactory();
 			else if ( "RAM".equalsIgnoreCase( component ) )       factory = new Component.RamModuleFactory();

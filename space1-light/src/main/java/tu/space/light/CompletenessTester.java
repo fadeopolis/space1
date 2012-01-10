@@ -71,4 +71,10 @@ public class CompletenessTester extends Processor<Computer> {
 	}
 	
 	private final ContainerReference pcs;
+
+	
+	public void onStartUp() {
+		// TODO Auto-generated method stub
+		
+	}
 }

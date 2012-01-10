@@ -7,7 +7,7 @@ import org.mozartspaces.core.MzsCore;
 import tu.space.gui.Browser;
 import tu.space.utils.Logger;
 import tu.space.utils.UUIDGenerator;
-import tu.space.worker.SpaceDataProvider;
+import tu.space.provider.SpaceDataProvider;
 
 import ch.qos.logback.classic.BasicConfigurator;
 
@@ -62,7 +62,7 @@ public class Factory {
 			try{
 				port = Integer.parseInt(args[0]);
 				Factory fac = new Factory(port);
-				new Browser(new SpaceDataProvider(fac.getId(), fac.getFactorySpace()));
+				new Browser(new SpaceDataProvider(fac.getId(), port, fac.getFactorySpace()));
 			} catch (NumberFormatException e){
 				//arg not a number
 				System.err.println("Port is not a number!\nUsage: ./Factory port");

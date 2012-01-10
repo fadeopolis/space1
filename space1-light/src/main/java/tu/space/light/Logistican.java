@@ -75,4 +75,5 @@ public class Logistican extends Processor<Computer> {
 	private final ContainerReference pcs;
 	private final ContainerReference trash;
 	private final ContainerReference storage;
+	
 }

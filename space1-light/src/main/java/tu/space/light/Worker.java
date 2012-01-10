@@ -15,6 +15,12 @@ public abstract class Worker implements Runnable {
 		if ( args.length != 2 ) {
 			System.err.println("usage: " + getClass().getSimpleName() + " NAME PORT" );
 			System.exit( 1 );
+		} else {
+			try{
+				Integer.parseInt(args[1]);
+			} catch (NumberFormatException e){
+				System.err.println("usage: " + getClass().getSimpleName() + " NAME PORT, Port is not a number");
+			}
 		}
 		
 		this.workerId = args[0];

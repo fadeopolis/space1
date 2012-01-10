@@ -45,7 +45,7 @@ public abstract class ContainerCreator{
 	public static final LabelSelector SELECTOR_OK                        = selector( STR_OK                        );
 	
 	public static AnySelector any( int i ) {
-		return AnyCoordinator.newSelector( 1 );
+		return AnyCoordinator.newSelector( i );
 	}
 	public static final AnySelector SELECT_1   = AnyCoordinator.newSelector( 1 );
 	public static final AnySelector SELECT_2   = AnyCoordinator.newSelector( 2 );
@@ -55,6 +55,7 @@ public abstract class ContainerCreator{
 	public static FifoSelector fifo( int i ) {
 		return FifoCoordinator.newSelector( i );
 	}
+		
 	public static final FifoSelector FIFO_MAX = FifoCoordinator.newSelector( FifoSelector.COUNT_MAX );
 	
 	public static final int DEFAULT_TX_TIMEOUT = 5000;
@@ -87,7 +88,7 @@ public abstract class ContainerCreator{
 	 * @throws MzsCoreException
 	 */
 	public static ContainerReference getCpuContainer( final URI space, final Capi capi ) throws MzsCoreException{
-		return getContainer( capi, space, "CpuContainer", new FifoCoordinator() );
+		return getContainer( capi, space, "CpuContainer", new AnyCoordinator() );
 	}
 	
 	/**
@@ -101,7 +102,7 @@ public abstract class ContainerCreator{
 	 * @throws MzsCoreException
 	 */
 	public static ContainerReference getGpuContainer( final URI space, final Capi capi ) throws MzsCoreException{
-		return getContainer( capi, space, "GpuContainer", new FifoCoordinator() );
+		return getContainer( capi, space, "GpuContainer", new AnyCoordinator() );
 	}
 	
 	/**
@@ -115,7 +116,7 @@ public abstract class ContainerCreator{
 	 * @throws MzsCoreException
 	 */
 	public static ContainerReference getRamContainer( final URI space, final Capi capi ) throws MzsCoreException{
-		return getContainer( capi, space, "RamCoordinator", new FifoCoordinator() );
+		return getContainer( capi, space, "RamCoordinator", new AnyCoordinator() );
 	}
 	
 	/**

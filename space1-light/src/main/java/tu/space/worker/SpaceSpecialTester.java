@@ -20,6 +20,7 @@ import tu.space.components.Computer.TestStatus;
 import tu.space.utils.Logger;
 import tu.space.utils.SpaceException;
 
+@Deprecated
 public class SpaceSpecialTester extends SpaceTester {
 
 	private List<Computer> pcs;
