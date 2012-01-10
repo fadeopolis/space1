@@ -19,6 +19,9 @@ public class Logger {
 	public static Logger make( Class<?> c ) {
 		return new Logger( org.apache.log4j.Logger.getLogger( c ) );
 	}
+	public static Logger make( String name ) {
+		return new Logger( org.apache.log4j.Logger.getLogger( name ) );
+	}
 	
 	public void info( String msg, Object... args ) {
 		log( Level.INFO, msg, args );

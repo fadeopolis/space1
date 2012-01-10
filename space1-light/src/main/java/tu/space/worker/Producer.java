@@ -1,7 +1,6 @@
 package tu.space.worker;
 
 import java.util.Random;
-import java.util.UUID;
 
 import tu.space.components.Component;
 import tu.space.utils.UUIDGenerator;
@@ -73,8 +72,8 @@ public abstract class Producer implements Runnable {
 			UUIDGenerator uuids = new UUIDGenerator();
 			
 			// produce next component
-			boolean   faulty    = rand2.nextDouble() < errorRate; // bernoulli experiment
-			UUID      productId = uuids.generate();
+			boolean faulty    = rand2.nextDouble() < errorRate; // bernoulli experiment
+			String  productId = uuids.generate();
 			
 			Component c = factory.make( productId, workerId, faulty );
 			

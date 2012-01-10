@@ -71,8 +71,7 @@ public class SpaceDataProvider implements DataProvider {
 
 	@Override
 	public TableModel storage() throws Exception {
-		ContainerReference cref = ContainerCreator.getStorageContainer( space, capi );
-		return new SpaceTableModel(Computer.class, core, cref );
+		return new SpaceTableModel(Computer.class, core, ContainerCreator.getStorageContainer( space, capi ) );
 	}
 
 	@Override

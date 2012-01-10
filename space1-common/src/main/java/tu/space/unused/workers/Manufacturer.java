@@ -3,7 +3,6 @@ package tu.space.unused.workers;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -47,9 +46,9 @@ public class Manufacturer extends Worker {
 			
 			try {
 				while ( true ) {
-					Future<UUID>      uuidF      = ex.submit( new Callable<UUID>() {
+					Future<String>      uuidF      = ex.submit( new Callable<String>() {
 						@Override
-						public UUID call() throws Exception {
+						public String call() throws Exception {
 							return middleware.generateId();
 						}
 					});		
@@ -76,7 +75,7 @@ public class Manufacturer extends Worker {
 
 					try {
 						// mandatory parts
-						UUID            uuid = uuidF.get();
+						String          uuid = uuidF.get();
 						LOG.info("%s got id", Manufacturer.this);
 						Cpu             cpu  = cpuF.get();
 						Mainboard       mbd  = mainboardF.get();

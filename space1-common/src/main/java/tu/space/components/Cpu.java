@@ -1,9 +1,17 @@
 package tu.space.components;
 
-import java.util.UUID;
-
 public class Cpu extends Component {
-	public Cpu( UUID id, String producerId, boolean isFaulty ) {
-		super( id, producerId, isFaulty );
+	public enum Type {
+		SINGLE_CORE,
+		DUAL_CORE,
+		QUAD_CORE
 	}
+	
+	public Cpu( String id, String producerId, boolean isFaulty, Type type ) {
+		super( id, producerId, isFaulty );
+		
+		this.type = type;
+	}
+	
+	public final Type type;
 }

@@ -1,7 +1,6 @@
 package tu.space.unused.middleware;
 
 import java.io.Serializable;
-import java.util.UUID;
 
 import tu.space.components.Component;
 import tu.space.components.Computer;
@@ -11,7 +10,7 @@ import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
 
 public interface Middleware {
-	UUID generateId();
+	String generateId();
 
 	void beginTransaction();
 	void commit();

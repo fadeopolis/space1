@@ -1,8 +1,8 @@
 package tu.space.components;
 
 import java.io.Serializable;
-import java.util.UUID;
 
+import tu.space.components.Cpu.Type;
 import tu.space.utils.SpaceException;
 
 /**
@@ -11,11 +11,11 @@ import tu.space.utils.SpaceException;
 @SuppressWarnings("serial")
 public abstract class Component implements Serializable {
 
-	public final UUID    id;
+	public final String  id;
 	public final String  producerId;
 	public final boolean hasDefect;
 	
-	public Component( UUID id, String producerId, boolean isFaulty ) {
+	public Component( String id, String producerId, boolean isFaulty ) {
 		this.id          = id;
 		this.producerId  = producerId;
 		this.hasDefect   = isFaulty;
@@ -35,29 +35,29 @@ public abstract class Component implements Serializable {
 	}
 	
 	public static abstract class Factory<C extends Component> {
-		public abstract C make( UUID id, String producerId, boolean isFaulty );
+		public abstract C make( String id, String producerId, boolean isFaulty );
 		public abstract String getType();
 	}
 	public static class CpuFactory extends Factory<Cpu> {
-		public Cpu make( UUID id, String producerId, boolean isFaulty ) {
-			return new Cpu( id, producerId, isFaulty );
+		public Cpu make( String id, String producerId, boolean isFaulty ) {
+			return new Cpu( id, producerId, isFaulty, Type.SINGLE_CORE );
 		}
 		public String getType() { return "cpu"; }
 	}
 	public static class GpuFactory extends Factory<Gpu> {
-		public Gpu make( UUID id, String producerId, boolean isFaulty ) {
+		public Gpu make( String id, String producerId, boolean isFaulty ) {
 			return new Gpu( id, producerId, isFaulty );
 		}
 		public String getType() { return "gpu"; }
 	}
 	public static class MainboardFactory extends Factory<Mainboard> {
-		public Mainboard make( UUID id, String producerId, boolean isFaulty ) {
+		public Mainboard make( String id, String producerId, boolean isFaulty ) {
 			return new Mainboard( id, producerId, isFaulty );
 		}
 		public String getType() { return "mainboard"; }
 	}
 	public static class RamModuleFactory extends Factory<RamModule> {
-		public RamModule make( UUID id, String producerId, boolean isFaulty ) {
+		public RamModule make( String id, String producerId, boolean isFaulty ) {
 			return new RamModule( id, producerId, isFaulty );
 		}
 		public String getType() { return "ram"; }

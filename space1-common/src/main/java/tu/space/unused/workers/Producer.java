@@ -1,7 +1,6 @@
 package tu.space.unused.workers;
 
 import java.util.Random;
-import java.util.UUID;
 
 import tu.space.components.Component;
 import tu.space.unused.middleware.Middleware;
@@ -28,7 +27,7 @@ public class Producer<C extends Component> extends Worker {
 
 			// produce next component
 			boolean faulty    = rand.nextDouble() < errorRate; // bernoulli experiment
-			UUID    productId = middleware.generateId();
+			String  productId = middleware.generateId();
 			C       c         = factory.make( productId, id, faulty );
 
 			assert c.id         == productId;

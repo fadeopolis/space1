@@ -5,15 +5,15 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
-import java.util.UUID;
 
 public final class Computer implements Serializable {
 	public enum TestStatus {
 		YES, NO, UNTESTED;
 	}
 	
-	public final UUID   id;
+	public final String id;
 	public final String manufacturerId;
 	public final String defectTesterId;
 	public final String completenessTesterId;
@@ -28,10 +28,10 @@ public final class Computer implements Serializable {
 	public final TestStatus      complete;
 	public final boolean         finished;
 	
-	public Computer( UUID id, String manufacturerId, Cpu cpu, Gpu gpu, Mainboard mainboard, RamModule... ram ) {
+	public Computer( String id, String manufacturerId, Cpu cpu, Gpu gpu, Mainboard mainboard, RamModule... ram ) {
 		this( id, manufacturerId, cpu, gpu, mainboard, Arrays.asList( ram ) );
 	}
-	public Computer( UUID id, String manufacturerId, Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram ) {
+	public Computer( String id, String manufacturerId, Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram ) {
 		this( 
 			id, manufacturerId, null, null, null, 
 			cpu, gpu, mainboard, ram, 
@@ -40,7 +40,7 @@ public final class Computer implements Serializable {
 	}
 
 	private Computer( 
-			UUID id, String manufacturerId, String defectTesterId, String completenessTesterId, String logisticianId,
+			String id, String manufacturerId, String defectTesterId, String completenessTesterId, String logisticianId,
 			Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram,
 			TestStatus defect, TestStatus complete, boolean finished
 	) {
@@ -115,6 +115,17 @@ public final class Computer implements Serializable {
 		complete &= ramModules.size() == 1 || ramModules.size() == 2 || ramModules.size() == 4;
 		
 		return complete;
+	}
+	
+	public Iterator<Component> iterator() {
+		List<Component> cs = new ArrayList<Component>( 7 );
+		
+		cs.add( cpu );
+		cs.add( gpu );
+		cs.add( mainboard );
+		cs.addAll( ramModules );
+
+		return cs.iterator();
 	}
 	
 	@Override
