@@ -1,6 +1,7 @@
 package tu.space.components;
 
 import java.io.Serializable;
+import java.util.Random;
 
 import tu.space.components.Cpu.Type;
 import tu.space.utils.SpaceException;
@@ -40,7 +41,14 @@ public abstract class Component implements Serializable {
 	}
 	public static class CpuFactory extends Factory<Cpu> {
 		public Cpu make( String id, String producerId, boolean isFaulty ) {
-			return new Cpu( id, producerId, isFaulty, Type.SINGLE_CORE );
+			Type type;
+			switch ( new Random().nextInt( 3 ) ) {
+				case 0:  type = Type.SINGLE_CORE; break;
+				case 1:  type = Type.DUAL_CORE; break;
+				default: type = Type.QUAD_CORE; break;
+			}
+			
+			return new Cpu( id, producerId, isFaulty, type );
 		}
 		public String getType() { return "cpu"; }
 	}

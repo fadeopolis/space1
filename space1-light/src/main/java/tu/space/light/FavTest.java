@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import tu.space.components.Computer;
 import tu.space.components.RamModule;
 import tu.space.util.ContainerCreator;
+import tu.space.util.LogBack;
 import ch.qos.logback.classic.BasicConfigurator;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -34,9 +35,7 @@ import ch.qos.logback.classic.LoggerContext;
 public class FavTest implements NotificationListener {
 	public static void main( String... args ) throws MzsCoreException, InterruptedException {
 		tu.space.utils.Logger.configure();	
-		BasicConfigurator.configureDefaultContext();
-		Logger lc = ((LoggerContext) LoggerFactory.getILoggerFactory()).getLogger( Logger.ROOT_LOGGER_NAME );
-		lc.setLevel( Level.ERROR );
+		LogBack.configure();
 		
 		//embedded space on localhost port 9877
 		MzsCore core = ContainerCreator.getCore( 9987 );

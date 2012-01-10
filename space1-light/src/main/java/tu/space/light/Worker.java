@@ -38,7 +38,7 @@ public abstract class Worker implements Runnable {
 	
 	protected void rollback( TransactionReference tx ) {
 		try {
-			capi.rollbackTransaction( tx );
+			if ( tx != null ) capi.rollbackTransaction( tx );
 		} catch ( MzsCoreException e ) {
 			log.error( "Could not roll back transaction" );
 			e.printStackTrace();

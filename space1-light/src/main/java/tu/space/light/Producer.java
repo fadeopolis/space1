@@ -69,12 +69,15 @@ public class Producer<C extends Component> extends Worker {
 			//commit the transaction
 			capi.commitTransaction(tx);
 		} catch ( MzsCoreException e ) {
-			rollback( tx );
+			if ( tx != null ) rollback( tx );
 			
 			log.error( "Could not publish part %s", c );
 			e.printStackTrace();
 		}
 	}
+	
+	@Override
+	public void clean() {}
 	
 	private final int    quantity;
 	private final double errorRate;
