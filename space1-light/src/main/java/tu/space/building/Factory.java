@@ -5,6 +5,7 @@ import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.MzsCore;
 
 import tu.space.gui.Browser;
+import tu.space.util.LogBack;
 import tu.space.utils.Logger;
 import tu.space.utils.UUIDGenerator;
 import tu.space.provider.SpaceDataProvider;
@@ -52,6 +53,7 @@ public class Factory {
 	 * @param arg (int) port
 	 */
 	public static void main(String[] args) {	
+		LogBack.configure();
 		//args
 		int port;
 		

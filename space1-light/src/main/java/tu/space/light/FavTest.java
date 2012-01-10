@@ -1,74 +1,49 @@
 package tu.space.light;
 
-import static tu.space.util.ContainerCreator.DEFAULT_TX_TIMEOUT;
-import static tu.space.util.ContainerCreator.LABEL_UNTESTED_FOR_COMPLETENESS;
-import static tu.space.util.ContainerCreator.LABEL_UNTESTED_FOR_DEFECT;
-import static tu.space.util.ContainerCreator.SELECTOR_UNTESTED_FOR_COMPLETENESS;
-import static tu.space.util.ContainerCreator.getPcContainer;
+import static tu.space.util.ContainerCreator.*;
 
 import java.io.Serializable;
 import java.util.List;
 
+import org.mozartspaces.capi3.AnyCoordinator;
 import org.mozartspaces.capi3.CoordinationData;
 import org.mozartspaces.capi3.LabelCoordinator;
 import org.mozartspaces.capi3.LabelCoordinator.LabelData;
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
+import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.Entry;
 import org.mozartspaces.core.MzsCore;
 import org.mozartspaces.core.MzsCoreException;
+import org.mozartspaces.core.TransactionReference;
+import org.mozartspaces.core.MzsConstants.*;
 import org.mozartspaces.notifications.Notification;
 import org.mozartspaces.notifications.NotificationListener;
-import org.mozartspaces.notifications.NotificationManager;
 import org.mozartspaces.notifications.Operation;
-import org.slf4j.LoggerFactory;
-
-import tu.space.components.Computer;
-import tu.space.components.RamModule;
-import tu.space.util.ContainerCreator;
 import tu.space.util.LogBack;
-import ch.qos.logback.classic.BasicConfigurator;
 import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.LoggerContext;
 
 public class FavTest implements NotificationListener {
 	public static void main( String... args ) throws MzsCoreException, InterruptedException {
 		tu.space.utils.Logger.configure();	
-		LogBack.configure();
-		
-		//embedded space on localhost port 9877
-		MzsCore core = ContainerCreator.getCore( 9987 );
+		LogBack.configure( Level.ERROR );
+
+		MzsCore core = DefaultMzsCore.newInstance( 9877 );
 		final Capi    capi = new Capi(core);
-		
-		final ContainerReference cref = getPcContainer( core.getConfig().getSpaceUri(), capi );
-		
-		NotificationManager nm = new NotificationManager( core );
-//		nm.createNotification( cref, new FavTest(), EnumSet.of( Operation.WRITE ), null, null );
-		
-		capi.createTransaction( DEFAULT_TX_TIMEOUT, core.getConfig().getSpaceUri() );
-		
-		Worker w = new DefectTester( "test", "9987" );
-		new Thread( w ).start();
-		Thread.sleep( 500 );
-		capi.write( 
-			cref, 
-			new Entry( 
-				new Computer( "foo", "foo", null, null, null, new RamModule[0] ), 
-				LABEL_UNTESTED_FOR_DEFECT, LABEL_UNTESTED_FOR_COMPLETENESS,
-				LabelCoordinator.newCoordinationData( "Computer.id:foo" )
-			) 
+
+		final ContainerReference cref = getContainer( capi, core.getConfig().getSpaceUri(), "foo",
+			new LabelCoordinator(),
+			new AnyCoordinator()
 		);
 				
+		TransactionReference tx = capi.createTransaction( DEFAULT_TX_TIMEOUT, core.getConfig().getSpaceUri() );
 		
-		Thread.sleep( 2000 );
+		capi.write( cref, new Entry( "foo", LabelCoordinator.newCoordinationData( "foo" ) ) );
+		capi.write( cref, new Entry( "bar", LabelCoordinator.newCoordinationData( "foo" ) ) );
+		capi.write( cref, new Entry( "bar", LabelCoordinator.newCoordinationData( "foo" ) ) );
 		
-		List<Serializable> l = capi.take( cref, SELECTOR_UNTESTED_FOR_COMPLETENESS, 1000, null );
-		for ( Object o : l ) {
-			System.err.println( o );
-		}
+		System.err.println( capi.test( cref, ANY_MAX, RequestTimeout.ZERO, tx ) );
 		
-		w.clean();
 		core.shutdown( true );
 	}
 

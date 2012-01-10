@@ -51,9 +51,9 @@ public abstract class Processor<E> extends Worker {
 
 	/**
 	 * Process part
-	 * !! This runs in a transaction that is automatically committed when process() returns !!
+	 * !! This runs in a transaction that is automatically committed when process() returns true !!
 	 */
-	protected abstract void process( E e, Operation o, List<CoordinationData> cds, TransactionReference tx ) throws MzsCoreException;
+	protected abstract boolean process( E e, Operation o, List<CoordinationData> cds, TransactionReference tx ) throws MzsCoreException;
 	
 	protected final void registerNotification( ContainerReference cref, Operation... ops ) {
 		try {
@@ -86,10 +86,10 @@ public abstract class Processor<E> extends Worker {
 				try {
 					tx = capi.createTransaction( ContainerCreator.DEFAULT_TX_TIMEOUT, space );
 					
-					process( e, operation, cds, tx );
-
-					capi.commitTransaction( tx );
-				} catch ( MzsCoreException ex ) {
+					if ( process( e, operation, cds, tx ) ) {
+						capi.commitTransaction( tx );						
+					}
+				} catch ( Exception ex ) {
 					rollback( tx );
 					
 					log.error("Error while processing element %s", e );

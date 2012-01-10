@@ -9,10 +9,10 @@ import static tu.space.util.ContainerCreator.fifo;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import org.mozartspaces.capi3.CoordinationData;
+import org.mozartspaces.capi3.CountNotMetException;
 import org.mozartspaces.capi3.FifoCoordinator;
 import org.mozartspaces.capi3.LabelCoordinator;
 import org.mozartspaces.core.Capi;
@@ -236,54 +236,47 @@ public class Manufacturer extends Processor<Component> {
 	}
 
 	@Override
-	protected void process(Component e, Operation o,
+	protected boolean process(Component e, Operation o,
 			List<CoordinationData> cds, TransactionReference tx)
 			throws MzsCoreException {
-		buildPc(tx);
+		try {
+			buildPc(tx);			
+			return true;
+		} catch ( CountNotMetException ex ) {
+			rollback( tx );			
+			return false;
+		}
 	}
 
-	private void buildPc(TransactionReference tx) throws MzsCoreException {
+	private synchronized void buildPc(TransactionReference tx) throws MzsCoreException {
 		// mandatory take parts
-		Cpu cpu = (Cpu) capi.take(crefCpu, any(1), RequestTimeout.ZERO, tx)
-				.get(0);
-		Mainboard mbd = (Mainboard) capi.take(crefMainboards, fifo(1),
-				RequestTimeout.ZERO, tx).get(0);
+		Cpu       cpu = (Cpu)       capi.take(crefCpu,        any(1),  RequestTimeout.TRY_ONCE, tx).get(0);
+		Mainboard mbd = (Mainboard) capi.take(crefMainboards, fifo(1), RequestTimeout.TRY_ONCE, tx).get(0);
+		RamModule ram = (RamModule) capi.take(crefRam,        any(1),  RequestTimeout.TRY_ONCE, tx ).get( 0 );
 
 		// optional parts
 		Gpu gpu;
 		try {
-			gpu = (Gpu) capi.take(crefGpu, any(1), RequestTimeout.ZERO, tx)
-					.get(0);
-		} catch (MzsCoreException e) {
+			gpu = (Gpu) capi.take(crefGpu, any(1), RequestTimeout.TRY_ONCE, tx).get(0);
+		} catch (CountNotMetException e) {
 			gpu = null;
 		}
 
 		// ram is a bitch
-		int numRams = capi.test(crefRam, ANY_MAX, RequestTimeout.ZERO, tx);
-
-		List<RamModule> ram;
-		switch (numRams) {
-		case 0:
-			ram = Collections.emptyList();
-			capi.rollbackTransaction(tx);
-			break;
-		case 1:
-		case 2:
-			ram = capi.take(crefRam, any(numRams), RequestTimeout.ZERO, tx);
-			break;
-		// if 3, take 2
-		case 3:
-			ram = capi.take(crefRam, any(2), RequestTimeout.ZERO, tx);
-			break;
-		// if 4 or more, take 4
-		default:
-			ram = capi.take(crefRam, any(4), RequestTimeout.ZERO, tx);
-			break;
-		}
+		List<RamModule> rams;
+		try {
+			rams = capi.take(crefRam, any(3), RequestTimeout.TRY_ONCE, tx);
+		} catch (CountNotMetException e1) {
+			try {
+				rams = capi.take(crefRam, any(1), RequestTimeout.TRY_ONCE, tx);
+			} catch (CountNotMetException e2) {
+				rams = new ArrayList<RamModule>();
+			}		
+		}		
+		rams.add( ram );
 
 		// assemble pc
-		Computer pc = new Computer(uuids.generate(), workerId, cpu, gpu, mbd,
-				ram);
+		Computer pc = new Computer(uuids.generate(), workerId, cpu, gpu, mbd, rams);
 		capi.write(crefPc, RequestTimeout.DEFAULT, tx, new Entry(pc,
 				LABEL_UNTESTED_FOR_COMPLETENESS, LABEL_UNTESTED_FOR_DEFECT,
 				LabelCoordinator.newCoordinationData("Computer.id:" + pc.id)));
