@@ -1,10 +1,17 @@
 package tu.space.light;
 
+import static tu.space.util.ContainerCreator.ANY_MAX;
+import static tu.space.util.ContainerCreator.FIFO_MAX;
+import static tu.space.util.ContainerCreator.LABEL_UNTESTED_FOR_COMPLETENESS;
+import static tu.space.util.ContainerCreator.LABEL_UNTESTED_FOR_DEFECT;
+import static tu.space.util.ContainerCreator.any;
+import static tu.space.util.ContainerCreator.fifo;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-import org.mozartspaces.capi3.AnyCoordinator;
 import org.mozartspaces.capi3.CoordinationData;
 import org.mozartspaces.capi3.FifoCoordinator;
 import org.mozartspaces.capi3.LabelCoordinator;
@@ -12,6 +19,7 @@ import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.Entry;
 import org.mozartspaces.core.MzsConstants;
+import org.mozartspaces.core.MzsConstants.RequestTimeout;
 import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.core.TransactionReference;
 import org.mozartspaces.notifications.Operation;
@@ -27,9 +35,6 @@ import tu.space.util.LogBack;
 import tu.space.utils.Logger;
 import tu.space.utils.SpaceException;
 import tu.space.utils.UUIDGenerator;
-
-import static org.mozartspaces.core.MzsConstants.*;
-import static tu.space.util.ContainerCreator.*;
 
 /**
  * The manufacturer will be notified if a component was built, constructs a computer
@@ -112,8 +117,8 @@ public class Manufacturer extends Processor<Component> {
 			for(int i=0;i<=readMainboards.size()-cpuAmount;i++){
 				if(once){
 					ArrayList<Component> readcpus = capi.read(crefMainboards, FIFO_MAX, RequestTimeout.ZERO , tx);
-					ArrayList<Component> readram = capi.read(crefRam, FIFO_MAX, RequestTimeout.ZERO, tx);
-					ArrayList<Component> readgpu = capi.read(crefGpu, FIFO_MAX, RequestTimeout.ZERO, tx);
+					ArrayList<Component> readram = capi.read(crefRam, ANY_MAX, RequestTimeout.ZERO, tx);
+					ArrayList<Component> readgpu = capi.read(crefGpu, ANY_MAX, RequestTimeout.ZERO, tx);
 					cpuAmount = readcpus.size();
 					ramAmount = readram.size();
 					gpuAmount = readgpu.size();
@@ -124,7 +129,7 @@ public class Manufacturer extends Processor<Component> {
 				if(cpuAmount > 0 && ramAmount > 0){				
 					//take mainboard and cpu
 					ArrayList<Component> takeMainboard = capi.take(crefMainboards, fifo(1), MzsConstants.RequestTimeout.TRY_ONCE, tx);
-					ArrayList<Component> takeCpu = capi.take(crefCpu, fifo(1), MzsConstants.RequestTimeout.TRY_ONCE, tx);
+					ArrayList<Component> takeCpu = capi.take(crefCpu, any(1), MzsConstants.RequestTimeout.TRY_ONCE, tx);
 					cpuAmount--;
 					
 					//how many ram 
@@ -133,21 +138,21 @@ public class Manufacturer extends Processor<Component> {
 						case 0:
 							break;
 						case 1:
-							takeRams = capi.take(crefRam, fifo(1), RequestTimeout.TRY_ONCE, tx);
+							takeRams = capi.take(crefRam, any(1), RequestTimeout.TRY_ONCE, tx);
 							ramAmount--;
 							break;
 						case 2:
-							takeRams = capi.take(crefRam, fifo(2), RequestTimeout.TRY_ONCE, tx);
+							takeRams = capi.take(crefRam, any(2), RequestTimeout.TRY_ONCE, tx);
 							ramAmount -= 2;
 							break;
 						case 3:
 							//3 is one to much take 2
-							takeRams = capi.take(crefRam, fifo(2), RequestTimeout.TRY_ONCE, tx);
+							takeRams = capi.take(crefRam, any(2), RequestTimeout.TRY_ONCE, tx);
 							ramAmount -= 2;
 							break;
 						default :
 							//well we have 4 or more then let us take 4
-							takeRams = capi.take(crefRam, fifo(4), RequestTimeout.TRY_ONCE, tx);
+							takeRams = capi.take(crefRam, any(4), RequestTimeout.TRY_ONCE, tx);
 							ramAmount -= 4;
 							break;
 					}
@@ -155,7 +160,7 @@ public class Manufacturer extends Processor<Component> {
 					ArrayList<Component> takeGpu = null;
 					//have gpu then take it else leave it
 					if(gpuAmount > 0){
-						takeGpu = capi.take(crefGpu, fifo(1), MzsConstants.RequestTimeout.TRY_ONCE, tx);
+						takeGpu = capi.take(crefGpu, any(1), MzsConstants.RequestTimeout.TRY_ONCE, tx);
 						gpuAmount--;
 					}
 					
@@ -207,35 +212,39 @@ public class Manufacturer extends Processor<Component> {
 	}
 	
 	private void buildPc( TransactionReference tx ) throws MzsCoreException {
-		try {
 			// mandatory take parts
-			Cpu cpu       = (Cpu) capi.take( crefCpu, fifo(1), RequestTimeout.ZERO, tx ).get( 0 );
+			Cpu cpu       = (Cpu) capi.take( crefCpu, any(1), RequestTimeout.ZERO, tx ).get( 0 );
 			Mainboard mbd = (Mainboard) capi.take( crefMainboards, fifo(1), RequestTimeout.ZERO, tx ).get( 0 );
 
 			// optional parts
 			Gpu gpu;
 			try {
-				gpu = (Gpu) capi.take( crefGpu, fifo(1), RequestTimeout.ZERO, tx ).get( 0 );			
+				gpu = (Gpu) capi.take( crefGpu, any(1), RequestTimeout.ZERO, tx ).get( 0 );			
 			} catch ( MzsCoreException e ) {
 				gpu = null;
 			}
 		
 			// ram is a bitch
-			int numRams = capi.test( crefRam, FIFO_MAX, RequestTimeout.ZERO, tx );
+			int numRams = capi.test( crefRam, ANY_MAX, RequestTimeout.ZERO, tx );
 		
 			List<RamModule> ram;
 			switch ( numRams ) {
 				case 0:
+					ram = Collections.emptyList();
 					capi.rollbackTransaction( tx );
+					break;
 				case 1:
 				case 2:
-					ram = capi.take( crefRam, fifo( numRams ), RequestTimeout.ZERO, tx );
+					ram = capi.take( crefRam, any( numRams ), RequestTimeout.ZERO, tx );
+					break;
 				// if 3, take 2
 				case 3:
-					ram = capi.take( crefRam, fifo( 2 ), RequestTimeout.ZERO, tx );
+					ram = capi.take( crefRam, any( 2 ), RequestTimeout.ZERO, tx );
+					break;
 				// if 4 or more, take 4
 				default:
-					ram = capi.take( crefRam, fifo(4), RequestTimeout.ZERO, tx );				
+					ram = capi.take( crefRam, any(4), RequestTimeout.ZERO, tx );				
+					break;
 			}
 		
 			//assemble pc
@@ -245,13 +254,6 @@ public class Manufacturer extends Processor<Component> {
 					LABEL_UNTESTED_FOR_COMPLETENESS,
 					LABEL_UNTESTED_FOR_DEFECT, 
 					LabelCoordinator.newCoordinationData( "Computer.id:" + pc.id )
-					));
-		
-			capi.commitTransaction( tx );
-		} catch ( MzsCoreException e ) {
-			rollback( tx );
-//        	log.info("Worker: %s, could not build Pc", workerId);
-//        	e.printStackTrace();
-		}
+			));
 	}
 }
