@@ -1,6 +1,5 @@
 package tu.space.components;
 
-import java.io.Serializable;
 import java.util.Random;
 
 import tu.space.components.Cpu.Type;
@@ -10,7 +9,7 @@ import tu.space.utils.SpaceException;
  * A component is a part of a computer
  */
 @SuppressWarnings("serial")
-public abstract class Component implements Serializable {
+public abstract class Component extends Product {
 
 	public final String  id;
 	public final String  producerId;
@@ -72,13 +71,14 @@ public abstract class Component implements Serializable {
 	}
 
 	@Override
-	public String toString() {
-		return getClass().getSimpleName() + "[" +
+	public String bareToString() {
+		return 
 			"id="         + id         + ", " + 
 			"producerId=" + producerId + ", " + 
-			"hasDefect="  + hasDefect   +
-		"]";
+			"hasDefect="  + hasDefect
+		;
 	}
+	
 	@Override
 	public int hashCode() {
 		final int prime = 31;

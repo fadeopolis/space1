@@ -13,5 +13,15 @@ public class Cpu extends Component {
 		this.type = type;
 	}
 	
+	@Override
+	public String bareToString() {
+		return
+			"id="         + id         + ", " + 
+			"producerId=" + producerId + ", " + 
+			"type="       + type       + ", " +
+			"hasDefect="  + hasDefect
+		;
+	}
+	
 	public final Type type;
 }

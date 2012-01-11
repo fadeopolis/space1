@@ -89,7 +89,6 @@ public class Manufacturer extends Processor<Component> {
 		Manufacturer mySm = new Manufacturer(args);
 
 		mySm.buildPcOnStartUp();
-
 		mySm.run();
 	}
 

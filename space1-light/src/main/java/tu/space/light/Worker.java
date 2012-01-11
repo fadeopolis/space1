@@ -1,15 +1,24 @@
 package tu.space.light;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
+import org.mozartspaces.capi3.CoordinationData;
 import org.mozartspaces.core.Capi;
+import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.DefaultMzsCore;
+import org.mozartspaces.core.Entry;
 import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.core.TransactionReference;
 
+import tu.space.components.Computer;
+import tu.space.components.Computer.TestStatus;
 import tu.space.util.ContainerCreator;
 import tu.space.utils.Logger;
+
+import static tu.space.util.ContainerCreator.*;
 
 public abstract class Worker implements Runnable {
 	public Worker( String[] args ) {
@@ -50,8 +59,8 @@ public abstract class Worker implements Runnable {
 		try {
 			if ( tx != null ) capi.rollbackTransaction( tx );
 		} catch ( MzsCoreException e ) {
-			log.error( "Could not roll back transaction" );
-			e.printStackTrace();
+			log.error( "Could not roll back transaction: " + e.getMessage() );
+//			e.printStackTrace();
 		}
 	}
 	
@@ -63,6 +72,23 @@ public abstract class Worker implements Runnable {
 	}
 	protected final void sleep() {
 		sleep( rand.nextInt( MAX_WORK_SLEEP_TIME ) );
+	}
+	
+	protected void writePc( ContainerReference cref, Computer pc ) throws MzsCoreException {
+		List<CoordinationData> cd = new ArrayList<CoordinationData>();
+		
+		if ( pc.defect == TestStatus.UNTESTED ) {
+			cd.add( LABEL_UNTESTED_FOR_DEFECT );
+		} else {
+			cd.add( LABEL_TESTED_FOR_DEFECT );
+		}
+		if ( pc.complete == TestStatus.UNTESTED ) {
+			cd.add( LABEL_UNTESTED_FOR_COMPLETENESS );
+		} else {
+			cd.add( LABEL_TESTED_FOR_COMPLETENESS );
+		}
+		
+		capi.write( cref, new Entry( pc, cd ) );	
 	}
 	
 	public    final String workerId;

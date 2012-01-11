@@ -1,6 +1,5 @@
 package tu.space.components;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -8,7 +7,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
-public final class Computer implements Serializable {
+public final class Computer extends Product {
 	public enum TestStatus {
 		YES, NO, UNTESTED;
 	}
@@ -129,14 +128,19 @@ public final class Computer implements Serializable {
 	}
 	
 	@Override
-	public String toString() {
-		return "Computer [id=" + id + ", manufacturerId=" + manufacturerId
-				+ ", defectTesterId=" + defectTesterId
-				+ ", completenessTesterId=" + completenessTesterId
-				+ ", logisticianId=" + logisticianId + ", cpu=" + cpu
-				+ ", gpu=" + gpu + ", mainboard=" + mainboard + ", ramModules="
-				+ ramModules + ", defect=" + defect + ", complete=" + complete
-				+ ", finished=" + finished + "]";
+	public String bareToString() {
+		return "id=" + id
+		   + ", manufacturerId=" + manufacturerId
+		   + ", defectTesterId=" + defectTesterId
+		   + ", completenessTesterId=" + completenessTesterId
+		   + ", logisticianId=" + logisticianId
+		   + ", cpu=" + cpu
+		   + ", gpu=" + gpu
+		   + ", mainboard=" + mainboard
+		   + ", ramModules=" + ramModules
+		   + ", defect=" + defect
+		   + ", complete=" + complete
+		   + ", finished=" + finished;
 	}
 	@Override
 	public int hashCode() {

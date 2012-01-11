@@ -26,23 +26,20 @@ import org.mozartspaces.core.MzsCoreException;
  */
 public abstract class ContainerCreator{
 	
-	public static final String STR_UNTESTED_FOR_COMPLETENESS = "UNTESTED_FOR_COMPLETENESS";
+	public static final String STR_TESTED_FOR_DEFECT         = "TESTED_FOR_DEFECT";
 	public static final String STR_UNTESTED_FOR_DEFECT       = "UNTESTED_FOR_DEFECT";
-	public static final String STR_DEFECT                    = "DEFECT";
-	public static final String STR_INCOMPLETE                = "INCOMPLETE";
-	public static final String STR_OK                        = "OK";
+	public static final String STR_TESTED_FOR_COMPLETENESS   = "TESTED_FOR_COMPLETENESS";
+	public static final String STR_UNTESTED_FOR_COMPLETENESS = "UNTESTED_FOR_COMPLETENESS";
 	
+	public static final LabelData LABEL_TESTED_FOR_COMPLETENESS   = label( STR_TESTED_FOR_COMPLETENESS   );
 	public static final LabelData LABEL_UNTESTED_FOR_COMPLETENESS = label( STR_UNTESTED_FOR_COMPLETENESS );
+	public static final LabelData LABEL_TESTED_FOR_DEFECT         = label( STR_TESTED_FOR_DEFECT         );
 	public static final LabelData LABEL_UNTESTED_FOR_DEFECT       = label( STR_UNTESTED_FOR_DEFECT       );
-	public static final LabelData LABEL_DEFECT                    = label( STR_DEFECT                    );
-	public static final LabelData LABEL_INCOMPLETE                = label( STR_INCOMPLETE                );
-	public static final LabelData LABEL_OK                        = label( STR_OK                        );
 
+	public static final LabelSelector SELECTOR_TESTED_FOR_COMPlETENESS   = selector( STR_TESTED_FOR_COMPLETENESS   );
 	public static final LabelSelector SELECTOR_UNTESTED_FOR_COMPLETENESS = selector( STR_UNTESTED_FOR_COMPLETENESS );
+	public static final LabelSelector SELECTOR_TESTED_FOR_DEFECT         = selector( STR_TESTED_FOR_DEFECT         );
 	public static final LabelSelector SELECTOR_UNTESTED_FOR_DEFECT       = selector( STR_UNTESTED_FOR_DEFECT       );
-	public static final LabelSelector SELECTOR_DEFECT                    = selector( STR_DEFECT                    );
-	public static final LabelSelector SELECTOR_INCOMPlETE                = selector( STR_INCOMPLETE                );
-	public static final LabelSelector SELECTOR_OK                        = selector( STR_OK                        );
 	
 	public static AnySelector any( int i ) {
 		return AnyCoordinator.newSelector( i );
@@ -55,7 +52,7 @@ public abstract class ContainerCreator{
 		
 	public static final FifoSelector FIFO_MAX = FifoCoordinator.newSelector( FifoSelector.COUNT_MAX );
 	
-	public static final int DEFAULT_TX_TIMEOUT = 99999999; // set very high for debugging
+	public static final int DEFAULT_TX_TIMEOUT = 3000; // set very high for debugging
 	
 	private static final int    DEFAULT_SPACE_PORT = 9877;
 	private static final String DEFAULT_SPACE_URI = "xvsm://localhost:";

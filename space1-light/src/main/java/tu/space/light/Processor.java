@@ -35,13 +35,17 @@ public abstract class Processor<E> extends Worker {
 	
 	@Override
 	public final void run() {
-		registerNotifications();
+		try {
+			registerNotifications();
+		} catch ( MzsCoreException e ) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
 	 * Called at startup, use registerNotification() for setup
 	 */
-	protected abstract void registerNotifications();
+	protected abstract void registerNotifications() throws MzsCoreException;
 
 	/**
 	 * Check if we should care about this part
