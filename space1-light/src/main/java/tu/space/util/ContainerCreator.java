@@ -184,7 +184,7 @@ public abstract class ContainerCreator{
 		return getContainer( capi, space, "Storage", new AnyCoordinator() );
 	}
 	
-	private static ContainerReference getContainer( Capi capi, URI space, String name, Coordinator... cs ) throws MzsCoreException {
+	public static ContainerReference getContainer( Capi capi, URI space, String name, Coordinator... cs ) throws MzsCoreException {
 		try {
 			// try looking up container
 			return capi.lookupContainer( name, space, RequestTimeout.DEFAULT, null);
@@ -194,10 +194,10 @@ public abstract class ContainerCreator{
 		}
 	}
 
-	private final static LabelData label( String label ) {
+	public final static LabelData label( String label ) {
 		return LabelCoordinator.newCoordinationData( label );
 	}
-	private final static LabelSelector selector( String label ) {
+	public final static LabelSelector selector( String label ) {
 		return LabelCoordinator.newSelector( label );
 	}
 }

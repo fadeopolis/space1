@@ -14,6 +14,7 @@ import org.mozartspaces.notifications.NotificationListener;
 import org.mozartspaces.notifications.Operation;
 
 import tu.space.gui.Browser;
+import tu.space.util.LogBack;
 import tu.space.util.ContainerCreator;
 import tu.space.utils.Logger;
 import tu.space.utils.UUIDGenerator;
@@ -69,6 +70,7 @@ public class Factory implements NotificationListener{
 	 * @param arg (int) port
 	 */
 	public static void main(String[] args) {	
+		LogBack.configure();
 		//args
 		int port;
 		

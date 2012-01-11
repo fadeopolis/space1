@@ -1,34 +1,31 @@
 package tu.space.light;
 
-import static tu.space.util.ContainerCreator.DEFAULT_TX_TIMEOUT;
-import static tu.space.util.ContainerCreator.LABEL_DEFECT;
-import static tu.space.util.ContainerCreator.LABEL_UNTESTED_FOR_DEFECT;
-import static tu.space.util.ContainerCreator.STR_UNTESTED_FOR_DEFECT;
+import static tu.space.util.ContainerCreator.*;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.mozartspaces.capi3.CoordinationData;
-import org.mozartspaces.capi3.LabelCoordinator;
+import org.mozartspaces.capi3.CountNotMetException;
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.Entry;
-import org.mozartspaces.core.MzsConstants;
 import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.core.TransactionReference;
-import org.mozartspaces.notifications.Operation;
+import org.mozartspaces.core.MzsConstants.RequestTimeout;
 
 import tu.space.components.Computer;
-import tu.space.components.RamModule;
 import tu.space.components.Computer.TestStatus;
+import tu.space.components.RamModule;
 import tu.space.util.ContainerCreator;
+import tu.space.util.LogBack;
 import tu.space.utils.Logger;
 
-public class DefectTester extends Processor<Computer> {
+public class DefectTester extends Worker {
 
 	public static void main(String... args) throws MzsCoreException {
 		Logger.configure();	
+		LogBack.configure();
 
 		new DefectTester( args ).run();
 	}
@@ -36,102 +33,146 @@ public class DefectTester extends Processor<Computer> {
 	public DefectTester( String... args ) throws MzsCoreException {
 		super( args );
 		
-		pcs = ContainerCreator.getPcContainer(   this.space, capi );
+		pcs  = ContainerCreator.getPcContainer(   this.space, capi );
 		cpus = ContainerCreator.getCpuContainer( this.space, capi );
 		gpus = ContainerCreator.getGpuContainer( this.space, capi );
 		mbds = ContainerCreator.getMainboardContainer( this.space, capi );
 		rams = ContainerCreator.getRamContainer( this.space, capi );
-		
-		onStartUp();
 	}
 	public DefectTester( String id, Capi capi, int space ) throws MzsCoreException {
 		super( id, capi, space );
 		
-		pcs = ContainerCreator.getPcContainer(   this.space, capi );
+		pcs  = ContainerCreator.getPcContainer(   this.space, capi );
 		cpus = ContainerCreator.getCpuContainer( this.space, capi );
 		gpus = ContainerCreator.getGpuContainer( this.space, capi );
 		mbds = ContainerCreator.getMainboardContainer( this.space, capi );
 		rams = ContainerCreator.getRamContainer( this.space, capi );
-		
-		onStartUp();
 	}
 
-	@Override
-	protected void registerNotifications() {
-		registerNotification( pcs, Operation.WRITE );
-	}
-
-	@Override
-	protected boolean shouldProcess( Computer pc, Operation o, List<CoordinationData> cds ) {
-		return pc.defect == TestStatus.UNTESTED;
-	}
-	
-	@Override
-	protected void process( Computer pc, Operation o, List<CoordinationData> cds, TransactionReference tx ) throws MzsCoreException {
-		// remove this PC from the space
-		capi.delete( pcs, LabelCoordinator.newSelector( "Computer.id:" + pc.id ), DEFAULT_TX_TIMEOUT, tx );
-		
-		List<CoordinationData> data = new ArrayList<CoordinationData>( cds );
-		
-		if ( pc.hasDefect() ){
-			pc = pc.tagAsTestedForDefect(workerId, TestStatus.YES);
-
-			if ( !pc.cpu.hasDefect )       capi.write( cpus, new Entry( pc.cpu ) );
-			if ( !pc.gpu.hasDefect )       capi.write( gpus, new Entry( pc.gpu ) );
-			if ( !pc.mainboard.hasDefect ) capi.write( mbds, new Entry( pc.mainboard ) );
-			for ( RamModule ram : pc.ramModules ) 
-				if ( !ram.hasDefect ) capi.write( rams, new Entry( ram ) );
-			
-			data.add( LABEL_DEFECT );
-		} else {
-			pc = pc.tagAsTestedForDefect(workerId, TestStatus.NO);
-		}
-			
-		data.remove( LABEL_UNTESTED_FOR_DEFECT );
-		
-		capi.write( pcs, new Entry( pc, data ) );
-		log.info("Tester: %s, tested error of PC: %s", workerId, pc.id );
-	}
-	
-	
-	public void onStartUp(){
+	public void run() {
+		TransactionReference tx = null; 
 		try {
-			TransactionReference tx = capi.createTransaction(5000, space);
-
-			ArrayList<Computer> computers = capi.take(pcs, Arrays.asList(LabelCoordinator.newSelector(STR_UNTESTED_FOR_DEFECT, MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO, tx);
-			
-			for(Computer pc: computers){
-				// remove this PC from the space
-				capi.delete( pcs, LabelCoordinator.newSelector( "Computer.id:" + pc.id ), DEFAULT_TX_TIMEOUT, tx );
+			while ( true ) {
+				tx = capi.createTransaction( DEFAULT_TX_TIMEOUT, space );
 				
-				List<CoordinationData> data = new ArrayList<CoordinationData>();
-				
-				if ( pc.hasDefect() ){
-					pc = pc.tagAsTestedForDefect(workerId, TestStatus.YES);
+				Computer pc;
+				try {
+					pc = (Computer) capi.take( pcs, SELECTOR_UNTESTED_FOR_DEFECT, RequestTimeout.INFINITE, tx ).get( 0 );
+				} catch ( CountNotMetException e ) {
+					// no part available
+					rollback( tx );
+					continue;
+				}
 
-					if ( !pc.cpu.hasDefect )       capi.write( cpus, new Entry( pc.cpu ) );
-					if ( !pc.gpu.hasDefect )       capi.write( gpus, new Entry( pc.gpu ) );
-					if ( !pc.mainboard.hasDefect ) capi.write( mbds, new Entry( pc.mainboard ) );
-					for ( RamModule ram : pc.ramModules ) 
+				List<CoordinationData> cd = new ArrayList<CoordinationData>();
+
+				if ( pc.hasDefect() ) {
+					log.info( "%s: Got a defect PC", this );
+					
+					pc = pc.tagAsTestedForDefect( workerId, TestStatus.YES );
+
+					// dismantle defect PC
+					if ( pc.cpu       != null && !pc.cpu.hasDefect       ) capi.write( cpus, new Entry( pc.cpu ) );
+					if ( pc.gpu       != null && !pc.gpu.hasDefect       ) capi.write( gpus, new Entry( pc.gpu ) );
+					if ( pc.mainboard != null && !pc.mainboard.hasDefect ) capi.write( mbds, new Entry( pc.mainboard ) );
+					for ( RamModule ram : pc.ramModules )
 						if ( !ram.hasDefect ) capi.write( rams, new Entry( ram ) );
 					
-					data.add( LABEL_DEFECT );
+					cd.add( label("DUMMY") );
 				} else {
-					pc = pc.tagAsTestedForDefect(workerId, TestStatus.NO);
+					log.info( "%s: Got a working PC", workerId );
+
+					pc = pc.tagAsTestedForDefect( workerId, TestStatus.NO );
+					if ( pc.complete == TestStatus.UNTESTED ) cd.add( LABEL_UNTESTED_FOR_COMPLETENESS );
 				}
-					
-				data.remove( LABEL_UNTESTED_FOR_DEFECT );
+
+				capi.write( pcs, new Entry( pc, cd ) );
 				
-				capi.write( pcs, new Entry( pc, data ) );
-				log.info("Tester: %s, tested error of PC: %s", workerId, pc.id );
+				capi.commitTransaction( tx );
 			}
-			
-			capi.commitTransaction(tx);
-		} catch (MzsCoreException e) {
-			log.error("Error at collecting pc's from startup");
+		} catch ( Exception e ) {
+			rollback( tx );
+			e.printStackTrace();
+		} finally {
+			clean();
 		}
 	}
-	
+//	
+//	@Override
+//	protected void registerNotifications() {
+//		registerNotification( pcs, Operation.WRITE );
+//	}
+//
+//	@Override
+//	protected boolean shouldProcess( Computer pc, Operation o, List<CoordinationData> cds ) {
+//		return pc.defect == TestStatus.UNTESTED;
+//	}
+//	
+//	@Override
+//	protected void process( Computer pc, Operation o, List<CoordinationData> cds, TransactionReference tx ) throws MzsCoreException {
+//		// remove this PC from the space
+//		capi.delete( pcs, LabelCoordinator.newSelector( "Computer.id:" + pc.id ), DEFAULT_TX_TIMEOUT, tx );
+//		
+//		List<CoordinationData> data = new ArrayList<CoordinationData>( cds );
+//		
+//		if ( pc.hasDefect() ){
+//			pc = pc.tagAsTestedForDefect(workerId, TestStatus.YES);
+//
+//			if ( !pc.cpu.hasDefect )       capi.write( cpus, new Entry( pc.cpu ) );
+//			if ( !pc.gpu.hasDefect )       capi.write( gpus, new Entry( pc.gpu ) );
+//			if ( !pc.mainboard.hasDefect ) capi.write( mbds, new Entry( pc.mainboard ) );
+//			for ( RamModule ram : pc.ramModules ) 
+//				if ( !ram.hasDefect ) capi.write( rams, new Entry( ram ) );
+//			
+//			data.add( LABEL_DEFECT );
+//		} else {
+//			pc = pc.tagAsTestedForDefect(workerId, TestStatus.NO);
+//		}
+//			
+//		data.remove( LABEL_UNTESTED_FOR_DEFECT );
+//		
+//		capi.write( pcs, new Entry( pc, data ) );
+//		log.info("Tester: %s, tested error of PC: %s", workerId, pc.id );
+//	}
+//	
+//	public void onStartUp(){
+//		try {
+//			TransactionReference tx = capi.createTransaction(5000, space);
+//
+//			ArrayList<Computer> computers = capi.take(pcs, Arrays.asList(LabelCoordinator.newSelector(STR_UNTESTED_FOR_DEFECT, MzsConstants.Selecting.COUNT_MAX)), MzsConstants.RequestTimeout.ZERO, tx);
+//			
+//			for(Computer pc: computers){
+//				// remove this PC from the space
+//				capi.delete( pcs, LabelCoordinator.newSelector( "Computer.id:" + pc.id ), DEFAULT_TX_TIMEOUT, tx );
+//				
+//				List<CoordinationData> data = new ArrayList<CoordinationData>();
+//				
+//				if ( pc.hasDefect() ){
+//					pc = pc.tagAsTestedForDefect(workerId, TestStatus.YES);
+//
+//					if ( !pc.cpu.hasDefect )       capi.write( cpus, new Entry( pc.cpu ) );
+//					if ( !pc.gpu.hasDefect )       capi.write( gpus, new Entry( pc.gpu ) );
+//					if ( !pc.mainboard.hasDefect ) capi.write( mbds, new Entry( pc.mainboard ) );
+//					for ( RamModule ram : pc.ramModules ) 
+//						if ( !ram.hasDefect ) capi.write( rams, new Entry( ram ) );
+//					
+//					data.add( LABEL_DEFECT );
+//				} else {
+//					pc = pc.tagAsTestedForDefect(workerId, TestStatus.NO);
+//				}
+//					
+//				data.remove( LABEL_UNTESTED_FOR_DEFECT );
+//				
+//				capi.write( pcs, new Entry( pc, data ) );
+//				log.info("Tester: %s, tested error of PC: %s", workerId, pc.id );
+//			}
+//			
+//			capi.commitTransaction(tx);
+//		} catch (MzsCoreException e) {
+//			log.error("Error at collecting pc's from startup");
+//		}
+//	}
+//	
 	private final ContainerReference pcs;
 	private final ContainerReference cpus;
 	private final ContainerReference gpus;

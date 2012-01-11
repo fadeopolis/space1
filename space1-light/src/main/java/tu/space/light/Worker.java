@@ -1,6 +1,7 @@
 package tu.space.light;
 
 import java.net.URI;
+import java.util.Random;
 
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.DefaultMzsCore;
@@ -26,14 +27,12 @@ public abstract class Worker implements Runnable {
 		this.workerId = args[0];
 		this.capi     = new Capi( DefaultMzsCore.newInstance( 0 ) );
 		this.space    = ContainerCreator.getSpaceURI( Integer.parseInt( args[1] ) );
-		this.log      = Logger.make( getClass() );
 	}
 	
 	public Worker( String name, Capi capi, int spacePort ) {
 		this.workerId = name;
 		this.capi     = capi;
 		this.space    = ContainerCreator.getSpaceURI( spacePort );
-		this.log      = Logger.make( getClass() );
 	}
 	
 	public abstract void run();
@@ -51,8 +50,21 @@ public abstract class Worker implements Runnable {
 		}
 	}
 	
+	protected final void sleep( int millis ) {
+		try {
+			Thread.sleep( millis );
+		} catch ( InterruptedException e ) {
+		}
+	}
+	protected final void sleep() {
+		sleep( rand.nextInt( MAX_WORK_SLEEP_TIME ) );
+	}
+	
 	public    final String workerId;
 	protected final Capi   capi;
 	protected final URI    space;
-	protected final Logger log;
+	protected final Logger log  = Logger.make( getClass() );
+	protected final Random rand = new Random();
+	
+	private static final int MAX_WORK_SLEEP_TIME = 3000;
 }
