@@ -41,6 +41,11 @@ public abstract class Worker implements Runnable {
 		capi.getCore().shutdown( false );
 	}
 	
+	@Override
+	public String toString() {
+		return getClass().getSimpleName() + " " + workerId;
+	}
+	
 	protected void rollback( TransactionReference tx ) {
 		try {
 			if ( tx != null ) capi.rollbackTransaction( tx );
@@ -50,7 +55,7 @@ public abstract class Worker implements Runnable {
 		}
 	}
 	
-	protected final void sleep( int millis ) {
+	public final static void sleep( int millis ) {
 		try {
 			Thread.sleep( millis );
 		} catch ( InterruptedException e ) {

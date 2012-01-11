@@ -241,9 +241,11 @@ public class Manufacturer extends Processor<Component> {
 			throws MzsCoreException {
 		try {
 			buildPc(tx);			
+			// if we got here we can commit, so return true
 			return true;
 		} catch ( CountNotMetException ex ) {
 			rollback( tx );			
+			// if we got here we have rolled back, so return false
 			return false;
 		}
 	}

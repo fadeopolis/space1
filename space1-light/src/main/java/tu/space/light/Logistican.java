@@ -1,81 +1,82 @@
 package tu.space.light;
 
-import static tu.space.util.ContainerCreator.DEFAULT_TX_TIMEOUT;
-import java.util.List;
+import static tu.space.util.ContainerCreator.*;
 
-import org.mozartspaces.capi3.CoordinationData;
-import org.mozartspaces.capi3.LabelCoordinator;
+import org.mozartspaces.capi3.CountNotMetException;
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.Entry;
-import org.mozartspaces.core.MzsConstants.RequestTimeout;
 import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.core.TransactionReference;
-import org.mozartspaces.notifications.Operation;
+import org.mozartspaces.core.MzsConstants.RequestTimeout;
 
 import tu.space.components.Computer;
-import tu.space.components.Computer.TestStatus;
 import tu.space.util.ContainerCreator;
+import tu.space.util.LogBack;
 import tu.space.utils.Logger;
 
-/**
- * Ships a pc after she was notified
- * 
- * @author raunig stefan
- */
-public class Logistican extends Processor<Computer> {
-	public Logistican( String... args ) throws MzsCoreException {
-		super( args );
-		
-		pcs     = ContainerCreator.getPcContainer( space, capi );
-		storage = ContainerCreator.getStorageContainer( space, capi );
-		trash   = ContainerCreator.getPcDefectContainer( space, capi );
-	}
-		
-	public Logistican( String id, Capi capi, int space ) throws MzsCoreException {
-		super( id, capi, space );
-		
-		pcs     = ContainerCreator.getPcContainer( this.space, capi );
-		storage = ContainerCreator.getStorageContainer( this.space, capi );
-		trash   = ContainerCreator.getPcDefectContainer( this.space, capi );
-	}
-	
-	public static void main(String[] args) throws MzsCoreException {
+public class Logistican extends Worker {
+
+	public static void main(String... args) throws MzsCoreException {
 		Logger.configure();	
+		LogBack.configure();
 
 		new Logistican( args ).run();
 	}
-	
-	@Override
-	protected void registerNotifications() {
-		registerNotification( pcs, Operation.WRITE );
+
+	public Logistican( String... args ) throws MzsCoreException {
+		super( args );
+		
+		pcs     = ContainerCreator.getPcContainer(   this.space, capi );
+		trash   = ContainerCreator.getPcDefectContainer( this.space, capi );
+		storage = ContainerCreator.getStorageContainer( this.space, capi );
+	}
+	public Logistican( String id, Capi capi, int space ) throws MzsCoreException {
+		super( id, capi, space );
+		
+		pcs     = ContainerCreator.getPcContainer(   this.space, capi );
+		trash   = ContainerCreator.getPcDefectContainer( this.space, capi );
+		storage = ContainerCreator.getStorageContainer( this.space, capi );
 	}
 
-	@Override
-	protected boolean shouldProcess( Computer e, Operation o, List<CoordinationData> cds ) {
-		return e.defect != TestStatus.UNTESTED && e.complete != TestStatus.UNTESTED;
-	}
+	public void run() {
+		TransactionReference tx = null; 
+		try {
+			while ( true ) {
+				tx = capi.createTransaction( DEFAULT_TX_TIMEOUT, space );
+				
+				Computer pc;
+				try {
+					pc = (Computer) capi.take( pcs, selector("DUMMY"), RequestTimeout.INFINITE, tx ).get( 0 );
+				} catch ( CountNotMetException e ) {
+					// no part available
+					rollback( tx );
+					continue;
+				}
 
-	@Override
-	protected boolean process( Computer pc, Operation o, List<CoordinationData> cds, TransactionReference tx ) throws MzsCoreException {
-		// remove this PC from the space
-		capi.delete( pcs, LabelCoordinator.newSelector( "Computer.id:" + pc.id ), DEFAULT_TX_TIMEOUT, tx );
-		
-		pc = pc.tagAsFinished( workerId );
-		
-		if ( pc.hasDefect() || pc.isComplete() ){
-			capi.write( trash, RequestTimeout.DEFAULT, tx, new Entry( pc ) );
-			log.info("Logistican: %s, tested completeness of Pc: %s, result uncomplete move to trash", workerId, pc.id );
-		} else {
-			capi.write( storage, RequestTimeout.DEFAULT, tx, new Entry( pc ) );
-			log.info("Logistican: %s, delivered Pc: %s", workerId, pc.id );					
+				pc = pc.tagAsFinished( workerId );
+
+				if ( !pc.isComplete() || pc.hasDefect() ) {
+					log.info( "%s: Got an bad PC %s", this, pc.id );
+					
+					capi.write( trash, new Entry( pc ) );
+				} else {
+					log.info( "%s: Got a mighty fine PC %s", this, pc.id );
+
+					capi.write( storage, new Entry( pc ) );
+				}
+
+				capi.commitTransaction( tx );
+			}
+		} catch ( Exception e ) {
+			rollback( tx );
+			e.printStackTrace();
+		} finally {
+			clean();
 		}
-		
-		return true;
 	}
-	
+
 	private final ContainerReference pcs;
 	private final ContainerReference trash;
 	private final ContainerReference storage;
-	
 }
