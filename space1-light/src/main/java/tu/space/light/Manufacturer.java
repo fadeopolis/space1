@@ -27,9 +27,11 @@ import org.mozartspaces.notifications.Operation;
 import tu.space.components.Component;
 import tu.space.components.Computer;
 import tu.space.components.Cpu;
+import tu.space.components.Cpu.Type;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
+import tu.space.contracts.Order;
 import tu.space.util.ContainerCreator;
 import tu.space.util.LogBack;
 import tu.space.utils.Logger;
@@ -91,138 +93,185 @@ public class Manufacturer extends Processor<Component> {
 
 		Manufacturer mySm = new Manufacturer(args);
 
-		mySm.buildPcOnStartUp();
-
+		//mySm.buildPcOnStartUp();
+		mySm.guildContractOnStartUp();
+		
 		mySm.run();
 	}
 
-	/**
-	 * Collects all components and builds pc's if possible
-	 */
-	public void buildPcOnStartUp() {
-		List<Computer> pcs = new ArrayList<Computer>();
+	private void guildContractOnStartUp(){
+		TransactionReference tx;
+		Order order;
 		try {
-			// crate transaction
-			TransactionReference tx = capi.createTransaction(500000, space);
-
-			/*
-			 * read all entries of mainboard to decide how many pc's we can
-			 * build from space.
-			 */
-			ArrayList<Component> readMainboards = capi.read(crefMainboards,
-					Arrays.asList(FifoCoordinator
-							.newSelector(MzsConstants.Selecting.COUNT_MAX)),
-					MzsConstants.RequestTimeout.INFINITE, tx);
-
-			/*
-			 * a trick to optimize the loop iterations, because we can only
-			 * build as much pc's as we have core components like cpu and
-			 * mainboards sizeof(mainboards)-sizeof(cpus) we do not consider ram
-			 * for now
-			 */
-			int cpuAmount = 0;
-			int ramAmount = 0;
-			int gpuAmount = 0;
-			boolean once = true;
-
-			for (int i = 0; i <= readMainboards.size() - cpuAmount; i++) {
-				if (once) {
-					ArrayList<Component> readcpus = capi.read(crefMainboards,
-							FIFO_MAX, RequestTimeout.ZERO, tx);
-					ArrayList<Component> readram = capi.read(crefRam, ANY_MAX,
-							RequestTimeout.ZERO, tx);
-					ArrayList<Component> readgpu = capi.read(crefGpu, ANY_MAX,
-							RequestTimeout.ZERO, tx);
-					cpuAmount = readcpus.size();
-					ramAmount = readram.size();
-					gpuAmount = readgpu.size();
-					once = false;
-				}
-
-				// as long as mainboard cpu and ram is available build a pc
-				if (cpuAmount > 0 && ramAmount > 0) {
-					// take mainboard and cpu
-					ArrayList<Component> takeMainboard = capi.take(
-							crefMainboards, fifo(1),
-							MzsConstants.RequestTimeout.TRY_ONCE, tx);
-					ArrayList<Component> takeCpu = capi.take(crefCpu, any(1),
-							MzsConstants.RequestTimeout.TRY_ONCE, tx);
-					cpuAmount--;
-
-					// how many ram
-					List<RamModule> takeRams = null;
-					switch (ramAmount) {
-					case 0:
-						break;
-					case 1:
-						takeRams = capi.take(crefRam, any(1),
-								RequestTimeout.TRY_ONCE, tx);
-						ramAmount--;
-						break;
-					case 2:
-						takeRams = capi.take(crefRam, any(2),
-								RequestTimeout.TRY_ONCE, tx);
-						ramAmount -= 2;
-						break;
-					case 3:
-						// 3 is one to much take 2
-						takeRams = capi.take(crefRam, any(2),
-								RequestTimeout.TRY_ONCE, tx);
-						ramAmount -= 2;
-						break;
-					default:
-						// well we have 4 or more then let us take 4
-						takeRams = capi.take(crefRam, any(4),
-								RequestTimeout.TRY_ONCE, tx);
-						ramAmount -= 4;
-						break;
+			tx = capi.createTransaction(5000, space);
+			order = (Order) capi.read(crefOrder, fifo(1), ContainerCreator.DEFAULT_TX_TIMEOUT, tx).get(0);
+			
+			//build as many pc's as possible form space
+			for(int i = 0; i < order.quantitiy; i++){
+				try{
+					Mainboard mainboard = (Mainboard) capi.take(crefMainboards, fifo(1), 
+							MzsConstants.RequestTimeout.ZERO, tx).get(0);
+					
+					Cpu cpu = null;
+					
+					//select cpu-type spec. from order
+					if(order.cpuType == Type.SINGLE_CORE){
+						cpu = (Cpu) capi.take(crefCpu, LabelCoordinator.newSelector(ContainerCreator.SINGLE_CORE, 1), 
+								MzsConstants.RequestTimeout.ZERO, tx).get(0);
+					} else if(order.cpuType == Type.DUAL_CORE){
+						cpu = (Cpu) capi.take(crefCpu, LabelCoordinator.newSelector(ContainerCreator.DUAL_CORE, 1), 
+								MzsConstants.RequestTimeout.ZERO, tx).get(0);
+					} else if(order.cpuType == Type.QUAD_CORE){
+						cpu = (Cpu) capi.take(crefCpu, LabelCoordinator.newSelector(ContainerCreator.QUAD_CORE, 1), 
+								MzsConstants.RequestTimeout.ZERO, tx).get(0);
 					}
-					log.info(
-							"Size of rams taken: %d, and size of remaining: %d\n",
-							takeRams.size(), ramAmount);
-					ArrayList<Component> takeGpu = null;
-					// have gpu then take it else leave it
-					if (gpuAmount > 0) {
-						takeGpu = capi.take(crefGpu, any(1),
-								MzsConstants.RequestTimeout.TRY_ONCE, tx);
-						gpuAmount--;
+					
+					Gpu gpu = null;
+					
+					//gpu
+					if(order.gpu){
+						gpu = (Gpu) capi.take(crefGpu, any(1), 
+								MzsConstants.RequestTimeout.ZERO, tx).get(0);
 					}
-
-					if (takeGpu == null) {
-						// ArrayList must have one element set it to null, for
-						// pc has no gpu
-						takeGpu = new ArrayList<Component>();
-						takeGpu.add(null);
-					}
-					pcs.add(new Computer(uuids.generate(), workerId,
-							(Cpu) takeCpu.get(0), (Gpu) takeGpu.get(0),
-							(Mainboard) takeMainboard.get(0), takeRams));
+					
+					//TODO ram
+					log.info("%s %s %s", cpu, gpu, mainboard);
+				} catch (MzsCoreException e ){
+					//core component missing stop building pc's
+					
 				}
 			}
-
-			// write the computers to space
-			for (Computer pc : pcs) {
-				// mark them with untested
-				Entry entry = new Entry(pc,
-						LabelCoordinator.newCoordinationData("untested"));
-
-				capi.write(crefPc, MzsConstants.RequestTimeout.DEFAULT, tx,
-						entry);
-				log.info("Worker: %s, build pc: %s", workerId, pc.id.toString());
-			}
-
-			// commit the transaction
-			capi.commitTransaction(tx);
-		} catch (SpaceException e) {
-			System.out.println("ERROR with message: " + e.getMessage());
-			e.printStackTrace();
 		} catch (MzsCoreException e) {
-			log.info(
-					"Worker: %s, something went wrong at building the pc at startup!",
-					workerId);
+			
 			e.printStackTrace();
 		}
 	}
+	
+	/**
+	 * Collects all components and builds pc's if possible
+	 */
+//	public void buildPcOnStartUp() {
+//		List<Computer> pcs = new ArrayList<Computer>();
+//		try {
+//			// crate transaction
+//			TransactionReference tx = capi.createTransaction(500000, space);
+//
+//			/*
+//			 * read all entries of mainboard to decide how many pc's we can
+//			 * build from space.
+//			 */
+//			ArrayList<Component> readMainboards = capi.read(crefMainboards,
+//					Arrays.asList(FifoCoordinator
+//							.newSelector(MzsConstants.Selecting.COUNT_MAX)),
+//					MzsConstants.RequestTimeout.INFINITE, tx);
+//
+//			/*
+//			 * a trick to optimize the loop iterations, because we can only
+//			 * build as much pc's as we have core components like cpu and
+//			 * mainboards sizeof(mainboards)-sizeof(cpus) we do not consider ram
+//			 * for now
+//			 */
+//			int cpuAmount = 0;
+//			int ramAmount = 0;
+//			int gpuAmount = 0;
+//			boolean once = true;
+//
+//			for (int i = 0; i <= readMainboards.size() - cpuAmount; i++) {
+//				if (once) {
+//					ArrayList<Component> readcpus = capi.read(crefMainboards,
+//							FIFO_MAX, RequestTimeout.ZERO, tx);
+//					ArrayList<Component> readram = capi.read(crefRam, ANY_MAX,
+//							RequestTimeout.ZERO, tx);
+//					ArrayList<Component> readgpu = capi.read(crefGpu, ANY_MAX,
+//							RequestTimeout.ZERO, tx);
+//					cpuAmount = readcpus.size();
+//					ramAmount = readram.size();
+//					gpuAmount = readgpu.size();
+//					once = false;
+//				}
+//
+//				// as long as mainboard cpu and ram is available build a pc
+//				if (cpuAmount > 0 && ramAmount > 0) {
+//					// take mainboard and cpu
+//					ArrayList<Component> takeMainboard = capi.take(
+//							crefMainboards, fifo(1),
+//							MzsConstants.RequestTimeout.TRY_ONCE, tx);
+//					ArrayList<Component> takeCpu = capi.take(crefCpu, any(1),
+//							MzsConstants.RequestTimeout.TRY_ONCE, tx);
+//					cpuAmount--;
+//
+//					// how many ram
+//					List<RamModule> takeRams = null;
+//					switch (ramAmount) {
+//					case 0:
+//						break;
+//					case 1:
+//						takeRams = capi.take(crefRam, any(1),
+//								RequestTimeout.TRY_ONCE, tx);
+//						ramAmount--;
+//						break;
+//					case 2:
+//						takeRams = capi.take(crefRam, any(2),
+//								RequestTimeout.TRY_ONCE, tx);
+//						ramAmount -= 2;
+//						break;
+//					case 3:
+//						// 3 is one to much take 2
+//						takeRams = capi.take(crefRam, any(2),
+//								RequestTimeout.TRY_ONCE, tx);
+//						ramAmount -= 2;
+//						break;
+//					default:
+//						// well we have 4 or more then let us take 4
+//						takeRams = capi.take(crefRam, any(4),
+//								RequestTimeout.TRY_ONCE, tx);
+//						ramAmount -= 4;
+//						break;
+//					}
+//					
+//					ArrayList<Component> takeGpu = null;
+//					// have gpu then take it else leave it
+//					if (gpuAmount > 0) {
+//						takeGpu = capi.take(crefGpu, any(1),
+//								MzsConstants.RequestTimeout.TRY_ONCE, tx);
+//						gpuAmount--;
+//					}
+//
+//					if (takeGpu == null) {
+//						// ArrayList must have one element set it to null, for
+//						// pc has no gpu
+//						takeGpu = new ArrayList<Component>();
+//						takeGpu.add(null);
+//					}
+//					pcs.add(new Computer(uuids.generate(), workerId,
+//							(Cpu) takeCpu.get(0), (Gpu) takeGpu.get(0),
+//							(Mainboard) takeMainboard.get(0), takeRams));
+//				}
+//			}
+//
+//			// write the computers to space
+//			for (Computer pc : pcs) {
+//				// mark them with untested
+//				Entry entry = new Entry(pc,
+//						LabelCoordinator.newCoordinationData("untested"));
+//
+//				capi.write(crefPc, MzsConstants.RequestTimeout.DEFAULT, tx,
+//						entry);
+//				log.info("Worker: %s, build pc: %s", workerId, pc.id.toString());
+//			}
+//
+//			// commit the transaction
+//			capi.commitTransaction(tx);
+//		} catch (SpaceException e) {
+//			System.out.println("ERROR with message: " + e.getMessage());
+//			e.printStackTrace();
+//		} catch (MzsCoreException e) {
+//			log.info(
+//					"Worker: %s, something went wrong at building the pc at startup!",
+//					workerId);
+//			e.printStackTrace();
+//		}
+//	}
 
 	@Override
 	protected void registerNotifications() {
@@ -244,9 +293,11 @@ public class Manufacturer extends Processor<Component> {
 			throws MzsCoreException {
 		try {
 			buildPc(tx);			
+			// if we got here we can commit, so return true
 			return true;
 		} catch ( CountNotMetException ex ) {
 			rollback( tx );			
+			// if we got here we have rolled back, so return false
 			return false;
 		}
 	}

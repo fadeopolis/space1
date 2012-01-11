@@ -65,6 +65,7 @@ public class DefectTester extends Worker {
 				}
 
 				List<CoordinationData> cd = new ArrayList<CoordinationData>();
+				cd.add( label("DUMMY") );
 
 				if ( pc.hasDefect() ) {
 					log.info( "%s: Got a defect PC", this );
@@ -78,15 +79,13 @@ public class DefectTester extends Worker {
 					for ( RamModule ram : pc.ramModules )
 						if ( !ram.hasDefect ) capi.write( rams, new Entry( ram ) );
 					
-					cd.add( label("DUMMY") );
 				} else {
 					log.info( "%s: Got a working PC", workerId );
 
 					pc = pc.tagAsTestedForDefect( workerId, TestStatus.NO );
 					if ( pc.complete == TestStatus.UNTESTED ) cd.add( LABEL_UNTESTED_FOR_COMPLETENESS );
+					capi.write( pcs, new Entry( pc, cd ) );
 				}
-
-				capi.write( pcs, new Entry( pc, cd ) );
 				
 				capi.commitTransaction( tx );
 			}

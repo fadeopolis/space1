@@ -65,11 +65,12 @@ public class CompletenessTester extends Worker {
 				}
 
 				List<CoordinationData> cd = new ArrayList<CoordinationData>();
+				cd.add( label("DUMMY") );
 
 				if ( !pc.isComplete() ) {
 					log.info( "%s: Got an incomplete PC %s", this, pc.id );
 					
-					pc = pc.tagAsTestedForCompleteness( workerId, TestStatus.YES );
+					pc = pc.tagAsTestedForCompleteness( workerId, TestStatus.NO );
 
 					// dismantle defect PC
 					if ( pc.cpu       != null && !pc.cpu.hasDefect       ) capi.write( cpus, new Entry( pc.cpu ) );
@@ -77,17 +78,14 @@ public class CompletenessTester extends Worker {
 					if ( pc.mainboard != null && !pc.mainboard.hasDefect ) capi.write( mbds, new Entry( pc.mainboard ) );
 					for ( RamModule ram : pc.ramModules )
 						if ( !ram.hasDefect ) capi.write( rams, new Entry( ram ) );
-					
-					cd.add( label("DUMMY") );
 				} else {
 					log.info( "%s: Got a complete PC %s", workerId, pc.id );
 
-					pc = pc.tagAsTestedForCompleteness( workerId, TestStatus.NO );
+					pc = pc.tagAsTestedForCompleteness( workerId, TestStatus.YES );
 					if ( pc.defect == TestStatus.UNTESTED ) cd.add( LABEL_UNTESTED_FOR_DEFECT );
+					capi.write( pcs, new Entry( pc, cd ) );
 				}
 
-				capi.write( pcs, new Entry( pc, cd ) );
-				
 				capi.commitTransaction( tx );
 			}
 		} catch ( Exception e ) {

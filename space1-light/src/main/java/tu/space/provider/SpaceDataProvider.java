@@ -153,8 +153,8 @@ public class SpaceDataProvider implements DataProvider {
 			}
 			
 			new Thread(
-				new Producer( id, capi, port, quota, errorRate, Component.makeFactory( type ), cref )
-			).start();
+				new Producer( id, capi, port, quota, errorRate, 
+						Component.makeFactory( type ), cref ) ).start();
 		} catch ( Exception e ) {
 			e.printStackTrace();
 		}
