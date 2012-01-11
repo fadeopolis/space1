@@ -2,6 +2,7 @@ package tu.space.light;
 
 import java.util.Random;
 
+import org.mozartspaces.capi3.LabelCoordinator;
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.Entry;
@@ -10,10 +11,14 @@ import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.core.TransactionReference;
 
 import tu.space.components.Component;
+import tu.space.components.Cpu;
+import tu.space.components.Cpu.Type;
+import tu.space.util.ContainerCreator;
 import tu.space.utils.UUIDGenerator;
 
 public class Producer<C extends Component> extends Worker {
-	public Producer( String name, Capi capi, int port, int quantity, double errorRate, Component.Factory<C> f, ContainerReference cref ) {
+	public Producer( String name, Capi capi, int port, int quantity, double errorRate, 
+			Component.Factory<C> f, ContainerReference cref) {
 		super( name, capi, port );
 		
 		this.quantity  = quantity;
@@ -63,8 +68,28 @@ public class Producer<C extends Component> extends Worker {
 
 			//write an entry to the container using the default timeout and the transaction
 			log.info("Worker: %s, produziere %s, Error: %s", workerId, c.id.toString(), c.hasDefect);
-		
-			capi.write( cref, RequestTimeout.DEFAULT, tx, new Entry( c ) );
+			
+			//labeldata for cpu-type
+			Entry entry = null;
+			if(c instanceof Cpu){
+				if(((Cpu) c).type == Type.SINGLE_CORE){
+					entry = new Entry( c,  
+							LabelCoordinator.newCoordinationData(ContainerCreator.SINGLE_CORE));
+				} else if (((Cpu) c).type == Type.DUAL_CORE){
+					entry = new Entry( c,  
+							LabelCoordinator.newCoordinationData(ContainerCreator.DUAL_CORE));
+				} else if (((Cpu) c).type == Type.QUAD_CORE){
+					entry = new Entry( c,  
+							LabelCoordinator.newCoordinationData(ContainerCreator.QUAD_CORE));					
+				} else {
+					entry = null;
+				}
+			} else {
+				//every component but not a cpu
+				entry = new Entry( c );
+			}
+			
+			capi.write( cref, RequestTimeout.DEFAULT, tx, entry );
 			
 			//commit the transaction
 			capi.commitTransaction(tx);

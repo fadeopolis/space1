@@ -26,25 +26,26 @@ import tu.space.utils.Logger;
 public class Logistican extends Processor<Computer> {
 	
 	public static void main(String... args) throws MzsCoreException {
-		Logger.configure();	
+		Logger.configure();
 		LogBack.configure();
 
-		new Logistican( args ).run();
+		new Logistican(args).run();
 	}
 
-	public Logistican( String... args ) throws MzsCoreException {
-		super( args );
-		
-		pcs     = ContainerCreator.getPcContainer(   this.space, capi );
-		trash   = ContainerCreator.getPcDefectContainer( this.space, capi );
-		storage = ContainerCreator.getStorageContainer( this.space, capi );
+	public Logistican(String... args) throws MzsCoreException {
+		super(args);
+
+		pcs = ContainerCreator.getPcContainer(this.space, capi);
+		trash = ContainerCreator.getPcDefectContainer(this.space, capi);
+		storage = ContainerCreator.getStorageContainer(this.space, capi);
 	}
-	public Logistican( String id, Capi capi, int space ) throws MzsCoreException {
-		super( id, capi, space );
-		
-		pcs     = ContainerCreator.getPcContainer(   this.space, capi );
-		trash   = ContainerCreator.getPcDefectContainer( this.space, capi );
-		storage = ContainerCreator.getStorageContainer( this.space, capi );
+
+	public Logistican(String id, Capi capi, int space) throws MzsCoreException {
+		super(id, capi, space);
+
+		pcs = ContainerCreator.getPcContainer(this.space, capi);
+		trash = ContainerCreator.getPcDefectContainer(this.space, capi);
+		storage = ContainerCreator.getStorageContainer(this.space, capi);
 	}
 
 	public void storePc( TransactionReference tx ) throws MzsCoreException {

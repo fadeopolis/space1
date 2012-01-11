@@ -19,6 +19,8 @@ import org.mozartspaces.core.MzsConstants.RequestTimeout;
 import org.mozartspaces.core.MzsCore;
 import org.mozartspaces.core.MzsCoreException;
 
+import tu.space.components.Cpu.Type;
+
 /**
  * This creator manages ContainerReferences
  * 
@@ -30,6 +32,11 @@ public abstract class ContainerCreator{
 	public static final String STR_UNTESTED_FOR_DEFECT       = "UNTESTED_FOR_DEFECT";
 	public static final String STR_TESTED_FOR_COMPLETENESS   = "TESTED_FOR_COMPLETENESS";
 	public static final String STR_UNTESTED_FOR_COMPLETENESS = "UNTESTED_FOR_COMPLETENESS";
+
+	//CPU-Type Label
+	public static final String SINGLE_CORE = Type.SINGLE_CORE.name();
+	public static final String DUAL_CORE = Type.DUAL_CORE.name();
+	public static final String QUAD_CORE = Type.QUAD_CORE.name();
 	
 	public static final LabelData LABEL_TESTED_FOR_COMPLETENESS   = label( STR_TESTED_FOR_COMPLETENESS   );
 	public static final LabelData LABEL_UNTESTED_FOR_COMPLETENESS = label( STR_UNTESTED_FOR_COMPLETENESS );
@@ -82,7 +89,7 @@ public abstract class ContainerCreator{
 	 * @throws MzsCoreException
 	 */
 	public static ContainerReference getCpuContainer( final URI space, final Capi capi ) throws MzsCoreException{
-		return getContainer( capi, space, "CpuContainer", new AnyCoordinator() );
+		return getContainer( capi, space, "CpuContainer", new AnyCoordinator(), new LabelCoordinator() );
 	}
 	
 	/**
