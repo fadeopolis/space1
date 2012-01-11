@@ -84,10 +84,9 @@ public class CompletenessTester extends Worker {
 
 					pc = pc.tagAsTestedForCompleteness( workerId, TestStatus.NO );
 					if ( pc.defect == TestStatus.UNTESTED ) cd.add( LABEL_UNTESTED_FOR_DEFECT );
+					capi.write( pcs, new Entry( pc, cd ) );
 				}
 
-				capi.write( pcs, new Entry( pc, cd ) );
-				
 				capi.commitTransaction( tx );
 			}
 		} catch ( Exception e ) {
