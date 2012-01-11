@@ -277,8 +277,15 @@ public class Manufacturer extends Processor<Component> {
 
 		// assemble pc
 		Computer pc = new Computer(uuids.generate(), workerId, cpu, gpu, mbd, rams);
-		capi.write(crefPc, RequestTimeout.DEFAULT, tx, new Entry(pc,
-				LABEL_UNTESTED_FOR_COMPLETENESS, LABEL_UNTESTED_FOR_DEFECT,
-				LabelCoordinator.newCoordinationData("Computer.id:" + pc.id)));
+		capi.write(
+			crefPc,
+			RequestTimeout.DEFAULT, 
+			tx, 
+			new Entry(
+				pc,
+				LABEL_UNTESTED_FOR_COMPLETENESS, 
+				LABEL_UNTESTED_FOR_DEFECT
+			)
+		);
 	}
 }
