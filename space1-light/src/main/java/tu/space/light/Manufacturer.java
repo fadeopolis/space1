@@ -51,10 +51,11 @@ public class Manufacturer extends Processor<Component> {
 
 		crefCpu = ContainerCreator.getCpuContainer(this.space, capi);
 		crefGpu = ContainerCreator.getGpuContainer(this.space, capi);
-		crefMainboards = ContainerCreator.getMainboardContainer(this.space,
-				capi);
+		crefMainboards = ContainerCreator.getMainboardContainer(this.space, capi);
 		crefRam = ContainerCreator.getRamContainer(this.space, capi);
 		crefPc = ContainerCreator.getPcContainer(this.space, capi);
+		
+		crefOrder = ContainerCreator.getOrderContainer(this.space, capi);
 	}
 
 	public Manufacturer(String[] args) throws MzsCoreException {
@@ -62,10 +63,11 @@ public class Manufacturer extends Processor<Component> {
 
 		crefCpu = ContainerCreator.getCpuContainer(this.space, capi);
 		crefGpu = ContainerCreator.getGpuContainer(this.space, capi);
-		crefMainboards = ContainerCreator.getMainboardContainer(this.space,
-				capi);
+		crefMainboards = ContainerCreator.getMainboardContainer(this.space, capi);
 		crefRam = ContainerCreator.getRamContainer(this.space, capi);
 		crefPc = ContainerCreator.getPcContainer(this.space, capi);
+		
+		crefOrder = ContainerCreator.getOrderContainer(this.space, capi);
 	}
 
 	// container refs
@@ -74,6 +76,7 @@ public class Manufacturer extends Processor<Component> {
 	private final ContainerReference crefGpu;
 	private final ContainerReference crefRam;
 	private final ContainerReference crefPc;
+	private final ContainerReference crefOrder;
 
 	private final UUIDGenerator uuids = new UUIDGenerator();
 
