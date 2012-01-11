@@ -57,7 +57,7 @@ public class Logistican extends Processor<Computer> {
 	}
 
 	@Override
-	protected void process( Computer pc, Operation o, List<CoordinationData> cds, TransactionReference tx ) throws MzsCoreException {
+	protected boolean process( Computer pc, Operation o, List<CoordinationData> cds, TransactionReference tx ) throws MzsCoreException {
 		// remove this PC from the space
 		capi.delete( pcs, LabelCoordinator.newSelector( "Computer.id:" + pc.id ), DEFAULT_TX_TIMEOUT, tx );
 		
@@ -70,6 +70,8 @@ public class Logistican extends Processor<Computer> {
 			capi.write( storage, RequestTimeout.DEFAULT, tx, new Entry( pc ) );
 			log.info("Logistican: %s, delivered Pc: %s", workerId, pc.id );					
 		}
+		
+		return true;
 	}
 	
 	private final ContainerReference pcs;
