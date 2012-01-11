@@ -1,6 +1,5 @@
 package tu.space;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -12,20 +11,16 @@ import java.util.concurrent.Future;
 
 import javax.jms.Connection;
 import javax.jms.JMSException;
-import javax.jms.Message;
-import javax.jms.MessageConsumer;
-import javax.jms.MessageProducer;
-import javax.jms.ObjectMessage;
-import javax.jms.Queue;
 import javax.jms.Session;
-import javax.jms.Topic;
-
 import tu.space.components.Computer;
 import tu.space.components.Cpu;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
+import tu.space.components.Product;
 import tu.space.components.RamModule;
 import tu.space.jms.JMS;
+import tu.space.jms.JMSReader;
+import tu.space.jms.JMSWriter;
 import tu.space.utils.DummyFuture;
 import tu.space.utils.Logger;
 import tu.space.utils.UUIDGenerator;
@@ -35,11 +30,14 @@ public class DarkManufacturer {
 	public static final String USAGE = "usage: manufacturer ID PORT";
 	
 	public static void main( String... args ) throws JMSException {
+		new DarkManufacturer( args );
+	}
+	DarkManufacturer( String[] args ) throws JMSException {	
 		if ( args.length != 2 ) {
 			System.err.println( USAGE );
 			System.exit( 1 );
 		}
-		final String id = args[0];
+		id = args[0];
 		
 		Logger.configure();
 		final Logger log = Logger.make( DarkManufacturer.class );
@@ -49,31 +47,13 @@ public class DarkManufacturer {
 		final Connection conn = JMS.openConnection( Integer.parseInt( args[1] ));
 		final Session    sess = JMS.createSession( conn );
 	
-		final Queue cpuQ = sess.createQueue( "cpu" );
-		final Queue gpuQ = sess.createQueue( "gpu" );
-		final Queue mbdQ = sess.createQueue( "mainboard" );
-		final Queue ramQ = sess.createQueue( "ram" );
-		final Topic cpuT = sess.createTopic( "cpu" );
-		final Topic gpuT = sess.createTopic( "gpu" );
-		final Topic mbdT = sess.createTopic( "mainboard" );
-		final Topic ramT = sess.createTopic( "ram" );
-
-		final Queue pcQ = sess.createQueue( "computer" );
-		final Topic pcT = sess.createTopic( "computer" );
+		final JMSWriter<Computer>  pcs    = JMS.getPCWriter( sess );
+		final JMSWriter<RamModule> ramOut = JMS.getRAMWriter( sess );
 		
-		final MessageProducer pcQOut = sess.createProducer( pcQ );
-		final MessageProducer pcTOut = sess.createProducer( pcT );
-
-		final MessageConsumer cpuIn = sess.createConsumer( cpuQ );
-		final MessageConsumer gpuIn = sess.createConsumer( gpuQ );
-		final MessageConsumer mbdIn = sess.createConsumer( mbdQ );
-		final MessageConsumer ramIn = sess.createConsumer( ramQ );
-		
-		final MessageProducer ramQOut = sess.createProducer( ramQ );
-		final MessageProducer cpuTOut = sess.createProducer( cpuT );
-		final MessageProducer gpuTOut = sess.createProducer( gpuT );
-		final MessageProducer mbdTOut = sess.createProducer( mbdT );
-		final MessageProducer ramTOut = sess.createProducer( ramT );
+		final JMSReader<Cpu>       cpus = JMS.getCPUReader( sess );
+		final JMSReader<Gpu>       gpus = JMS.getGPUReader( sess );
+		final JMSReader<Mainboard> mbds = JMS.getMainboardReader( sess );
+		final JMSReader<RamModule> rams = JMS.getRAMReader( sess );
 		
 		conn.start();
 		final ExecutorService ex = Executors.newCachedThreadPool();
@@ -90,10 +70,10 @@ public class DarkManufacturer {
 		
 		try {
 			while ( true ) {
-				Future<Cpu>             cpuF  = getComponent( ex, cpuIn, log, id, "CPU" );
-				Future<Gpu>             gpuF  = getComponent( ex, gpuIn, log, id, "GPU" );
-				Future<Mainboard>       mbdF  = getComponent( ex, mbdIn, log, id, "Mainboard" );
-				Future<List<RamModule>> ramF  = getRam( ex, ramIn, log, id );
+				Future<Cpu>             cpuF  = getComponent( ex, cpus );
+				Future<Gpu>             gpuF  = getComponent( ex, gpus );
+				Future<Mainboard>       mbdF  = getComponent( ex, mbds );
+				Future<List<RamModule>> ramF  = getRam( ex, rams );
 				
 				String          uuid  = uuids.generate();
 				Cpu             cpu   = cpuF.get();
@@ -103,23 +83,16 @@ public class DarkManufacturer {
 
 				// return unused pieces
 				if ( ram.size() == 3 ) {
-					RamModule back = ram.remove( 0 );
-					ramQOut.send( JMS.toMessage( sess, back ) );
+					ramOut.send( ram.remove( 0 ) );
 				}
 				log.info("%s is using %d pieces of RAM", id, ram.size() );
 					
 				Computer c = new Computer( uuid, id, cpu, gpu, mbd, ram );				
 				
 				// simulate work
-				Util.sleep( 3000 );
+				Util.sleep();
 				
-				cpuTOut.send( JMS.toRemovedMessage( sess, cpu ) );
-				gpuTOut.send( JMS.toRemovedMessage( sess, gpu ) );
-				mbdTOut.send( JMS.toRemovedMessage( sess, mbd ) );
-				for ( RamModule r : ram ) ramTOut.send( JMS.toRemovedMessage( sess, r ) );
-				
-				pcQOut.send( JMS.toMessage( sess, c ) );
-				pcTOut.send( JMS.toCreatedMessage( sess, c ) );
+				pcs.send( c );
 
 				sess.commit();
 				
@@ -135,31 +108,21 @@ public class DarkManufacturer {
 		}
 	}
 	
-	private static <E extends Serializable> Future<E> getComponent( 
-		ExecutorService ex, final MessageConsumer queue, 
-		final Logger log, final String id, final String type ) {
+	private <P extends Product> Future<P> getComponent( ExecutorService ex, final JMSReader<P> in ) {
 		
-		if ( ex.isTerminated() ) return new DummyFuture<E>();
+		if ( ex.isTerminated() ) return new DummyFuture<P>();
 		
-		return ex.submit( new Callable<E>() {
+		return ex.submit( new Callable<P>() {
 			@Override
-			public E call() throws Exception {
-				Message in = queue.receive();
-				if ( in == null ) return null;
+			public P call() throws Exception {
+				P p = in.read();
+				log.info( "%s got a %s", id, p.getClass().getSimpleName() );
 				
-				ObjectMessage msg = (ObjectMessage) in;
-
-				@SuppressWarnings("unchecked")
-				E e = (E) msg.getObject();
-				log.info("%s got a %s", id, type);
-				
-				return e;
+				return p;
 			}
 		});
 	}
-	private static Future<List<RamModule>> getRam( 
-			ExecutorService ex, final MessageConsumer queue, 
-			final Logger log, final String id ) {
+	private Future<List<RamModule>> getRam( ExecutorService ex, final JMSReader<RamModule> in ) {
 		if ( ex.isTerminated() ) return DummyFuture.make( Collections.<RamModule>emptyList() );
 			
 		return ex.submit( new Callable<List<RamModule>>() {
@@ -167,18 +130,17 @@ public class DarkManufacturer {
 			public List<RamModule> call() throws Exception {
 				List<RamModule> ram = new ArrayList<RamModule>();
 				
-				Message in;
+				RamModule r = in.read();
+
+				if ( r == null ) return ram;
 				
-				in = queue.receive();
-				if ( in == null ) return ram;
-				
-				ram.add( (RamModule) ((ObjectMessage) in).getObject() );
+				ram.add( r );
 				log.info("%s got a RAM module", id);
 				
 				for ( int i = 0; i < 3; i++ ) {
-					in = queue.receiveNoWait();
-					if ( in != null ) {
-						ram.add( (RamModule) ((ObjectMessage) in).getObject() );
+					r = in.readNoWait();
+					if ( r != null ) {
+						ram.add( r );
 						log.info("%s got a RAM module", id);
 					}									
 				}
@@ -202,4 +164,7 @@ public class DarkManufacturer {
 			return null;
 		}
 	}
+
+	private final String id;
+	private final Logger log = Logger.make( getClass() );
 }

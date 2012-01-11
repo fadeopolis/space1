@@ -7,14 +7,12 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
-import javax.jms.MessageProducer;
-import javax.jms.ObjectMessage;
 import javax.jms.Queue;
 import javax.jms.Session;
-import javax.jms.Topic;
-
 import tu.space.components.Computer;
 import tu.space.jms.JMS;
+import tu.space.jms.JMSReader;
+import tu.space.jms.JMSWriter;
 import tu.space.utils.Logger;
 import tu.space.utils.Util;
 
@@ -40,33 +38,18 @@ public class DarkLogistician {
 		final Connection conn = JMS.openConnection( port );
 		final Session    sess = conn.createSession( true, Session.SESSION_TRANSACTED );
 	
-		final Queue storageQ = sess.createQueue( "storage" );
-		final Topic storageT = sess.createTopic( "storage" );
-		
-		final MessageProducer storageQOut = sess.createProducer( storageQ );
-		final MessageProducer storageTOut = sess.createProducer( storageT );
-
-		final Queue trashQ = sess.createQueue( "trash" );
-		final Topic trashT = sess.createTopic( "trash" );
-		
-		final MessageProducer trashQOut = sess.createProducer( trashQ );
-		final MessageProducer trashTOut = sess.createProducer( trashT );
+		final JMSReader<Computer> computer = JMS.getPCReader( sess );
+		final JMSWriter<Computer> storage  = JMS.getStorageWriter( sess );
+		final JMSWriter<Computer> trash    = JMS.getTrashWriter( sess );
 		
 		final Queue computerQ = sess.createQueue( "computer" );
-		final Topic computerT = sess.createTopic( "computer" );
 
-		final MessageProducer computerTOut = sess.createProducer( computerT );
-		
 		MessageConsumer in = sess.createConsumer( computerQ, SELECTOR );
 		in.setMessageListener( new MessageListener() {
 			@Override
 			public void onMessage( Message message ) {
 				try {
-					ObjectMessage msg = (ObjectMessage) message;
-					
-					Computer c = (Computer) msg.getObject();
-					
-					computerTOut.send( JMS.toRemovedMessage( sess, c ) );
+					Computer c = computer.read();
 					
 					c = c.tagAsFinished( id );
 
@@ -74,16 +57,13 @@ public class DarkLogistician {
 					Util.sleep( 3000 );
 					
 					if ( c.hasDefect() || !c.isComplete() ) {
-						trashQOut.send( JMS.toMessage( sess, c ) );
-						trashTOut.send( JMS.toCreatedMessage( sess, c ) );
-						sess.commit();
-						log.info("%s trashed a PC", id);
+						trash.send( c );
+						log.info("%s trashed PC %s", id, c.id);
 					} else {
-						storageQOut.send( JMS.toMessage( sess, c ) );
-						storageTOut.send( JMS.toCreatedMessage( sess, c ) );
-						sess.commit();
-						log.info("%s stored a PC", id);
+						storage.send( c );
+						log.info("%s stored  PC %s", id, c.id);
 					}
+					sess.commit();
 				} catch ( JMSException e ) {
 					JMS.rollback( sess );
 					e.printStackTrace();

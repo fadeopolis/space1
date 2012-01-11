@@ -55,7 +55,7 @@ public final class DarkProducer implements Runnable {
 		this.connection = JMS.openConnection( port );
 		this.session    = JMS.createSession( connection );
 
-		this.jms = new JMSWriter( session, f.getType() );
+		this.jms = JMS.getWriter( session, f.getType() );
 	}
 	
 	public void run() {
@@ -70,6 +70,8 @@ public final class DarkProducer implements Runnable {
 		}
 		log.info( "%s finished", id );
 	}
+	
+	@SuppressWarnings("unchecked")
 	private void doRun() {
 		for ( int i = quota; i > 0; i-- ) {
 			log.info("%s has to make %d more component(s)", this, i);
@@ -84,7 +86,7 @@ public final class DarkProducer implements Runnable {
 			assert c.hasDefect  == faulty;
 
 			// sleep to simulate work time
-			Util.sleep( rand.nextInt( MAX_SLEEP_TIME ) );
+			Util.sleep();
 
 			// send out produced component
 			try {
@@ -111,6 +113,7 @@ public final class DarkProducer implements Runnable {
 	private final Connection connection;
 	private final Session    session;
 	
+	@SuppressWarnings("rawtypes")
 	private final JMSWriter jms;
 	
 	private final Random        rand  = new Random();
