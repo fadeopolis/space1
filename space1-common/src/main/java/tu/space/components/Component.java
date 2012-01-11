@@ -36,7 +36,7 @@ public abstract class Component extends Product {
 	
 	public static abstract class Factory<C extends Component> {
 		public abstract C make( String id, String producerId, boolean isFaulty );
-		public abstract String getType();
+		public abstract Class<C> getType();
 	}
 	public static class CpuFactory extends Factory<Cpu> {
 		public Cpu make( String id, String producerId, boolean isFaulty ) {
@@ -49,25 +49,25 @@ public abstract class Component extends Product {
 			
 			return new Cpu( id, producerId, isFaulty, type );
 		}
-		public String getType() { return "cpu"; }
+		public Class<Cpu> getType() { return Cpu.class; }
 	}
 	public static class GpuFactory extends Factory<Gpu> {
 		public Gpu make( String id, String producerId, boolean isFaulty ) {
 			return new Gpu( id, producerId, isFaulty );
 		}
-		public String getType() { return "gpu"; }
+		public Class<Gpu> getType() { return Gpu.class; }
 	}
 	public static class MainboardFactory extends Factory<Mainboard> {
 		public Mainboard make( String id, String producerId, boolean isFaulty ) {
 			return new Mainboard( id, producerId, isFaulty );
 		}
-		public String getType() { return "mainboard"; }
+		public Class<Mainboard> getType() { return Mainboard.class; }
 	}
 	public static class RamModuleFactory extends Factory<RamModule> {
 		public RamModule make( String id, String producerId, boolean isFaulty ) {
 			return new RamModule( id, producerId, isFaulty );
 		}
-		public String getType() { return "ram"; }
+		public Class<RamModule> getType() { return RamModule.class; }
 	}
 
 	@Override

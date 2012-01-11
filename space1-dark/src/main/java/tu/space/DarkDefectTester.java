@@ -7,15 +7,16 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.MessageListener;
-import javax.jms.MessageProducer;
 import javax.jms.ObjectMessage;
-import javax.jms.Queue;
 import javax.jms.Session;
-import javax.jms.Topic;
-
 import tu.space.components.Computer;
+import tu.space.components.Cpu;
+import tu.space.components.Gpu;
+import tu.space.components.Mainboard;
+import tu.space.components.RamModule;
 import tu.space.components.Computer.TestStatus;
 import tu.space.jms.JMS;
+import tu.space.jms.JMSWriter;
 import tu.space.utils.Logger;
 import tu.space.utils.Util;
 
@@ -37,13 +38,13 @@ public class DarkDefectTester {
 		final Connection conn = JMS.openConnection( port );
 		final Session    sess = conn.createSession( true, Session.AUTO_ACKNOWLEDGE );
 	
-		final Queue queue = sess.createQueue( "computer" );
-		final Topic topic = sess.createTopic( "computer" );
+		final JMSWriter<Computer>  pc  = JMS.getPCWriter( sess );
+		final JMSWriter<Cpu>       cpu = JMS.getCPUWriter( sess );
+		final JMSWriter<Gpu>       gpu = JMS.getGPUWriter( sess );
+		final JMSWriter<Mainboard> mbd = JMS.getMainboardWriter( sess );
+		final JMSWriter<RamModule> ram = JMS.getRAMWriter( sess );
 		
-		final MessageProducer qOut = sess.createProducer( queue );
-		final MessageProducer tOut = sess.createProducer( topic );
-		
-		MessageConsumer in = sess.createConsumer( queue, SELECTOR );
+		MessageConsumer in = sess.createConsumer( sess.createQueue( "computer" ), SELECTOR );
 		in.setMessageListener( new MessageListener() {
 			@Override
 			public void onMessage( Message message ) {
@@ -52,18 +53,26 @@ public class DarkDefectTester {
 					
 					Computer c = (Computer) msg.getObject();
 					
-					tOut.send( JMS.toRemovedMessage( sess, c ) );
-					
-					c = c.tagAsTestedForDefect( id, c.hasDefect() ? TestStatus.YES : TestStatus.NO );
+					pc.sendRemoved( c );
 
 					// simulate work
-					Util.sleep( 3000 );
-
-					qOut.send( JMS.toMessage( sess, c ) );
-					tOut.send( JMS.toCreatedMessage( sess, c ) );
-					sess.commit();
+					Util.sleep();
 					
-					log.info("%s tested a PC for defects", id);
+					if ( c.hasDefect() ) {
+						log.info("%s found PC %s to have defects", id, c.id );
+
+						if ( c.cpu      != null  && !c.cpu.hasDefect       )   cpu.send( c.cpu );
+						if ( c.gpu      != null  && !c.gpu.hasDefect       )   gpu.send( c.gpu );
+						if ( c.mainboard != null && !c.mainboard.hasDefect )   mbd.send( c.mainboard );
+						for ( RamModule r : c.ramModules ) if ( !r.hasDefect ) ram.send( r );
+					} else {
+						log.info("%s found PC %s to be OK", id, c.id );
+
+						c = c.tagAsTestedForDefect( id, TestStatus.NO );
+
+						pc.send( c );
+					}
+					sess.commit();
 				} catch ( JMSException e ) {
 					e.printStackTrace();
 					try {

@@ -108,7 +108,7 @@ public class DarkDataProvider implements DataProvider {
 			this( clazz, null );
 		}
 		public DarkTableModel( Class<?> clazz, String selector ) throws JMSException {
-			this( clazz, clazz.getSimpleName().toLowerCase(), selector );
+			this( clazz, clazz.getSimpleName(), selector );
 		}
 		public DarkTableModel( Class<?> clazz, String name, String selector ) throws JMSException {
 			this.fields = clazz.getFields();

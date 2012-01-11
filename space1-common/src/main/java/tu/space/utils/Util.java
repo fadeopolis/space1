@@ -12,6 +12,9 @@ public class Util {
 		new Scanner( System.in ).hasNextLine();
 	}
 
+	public static void sleep() {
+		
+	}
 	public static void sleep( long milliSeconds ) {
 		try {
 			Thread.sleep( milliSeconds );
