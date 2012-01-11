@@ -1,13 +1,14 @@
 package tu.space;
 
 import java.util.Random;
-import java.util.UUID;
 
 import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.Session;
 
 import tu.space.components.Component;
+import tu.space.jms.JMS;
+import tu.space.jms.JMSWriter;
 import tu.space.utils.Logger;
 import tu.space.utils.SpaceException;
 import tu.space.utils.UUIDGenerator;
@@ -16,43 +17,42 @@ import tu.space.utils.Util;
 public final class DarkProducer implements Runnable {
 	public static final int MAX_SLEEP_TIME = 3000;
 	public static final String USAGE = 
-			"usage: producer ID TYPE QUOTA ERROR_RATE\n"      +
+			"usage: producer ID PORT TYPE QUOTA ERROR_RATE\n"      +
 			"  where TYPE is one of CPU, GPU, MAINBOARD, RAM"
 	;
 	
 	public static void main( String... args ) throws InterruptedException, JMSException {
-		if ( args.length != 4 ) {
+		if ( args.length != 5 ) {
 			System.err.println( USAGE );
 			System.exit( 1 );
 		}
 		final String id        = args[0];
-		final int    quota     = Integer.parseInt( args[2] );
-		final double errorRate = Double.parseDouble( args[3] );
+		final int    port      = Integer.parseInt( args[1] );
+		final int    quota     = Integer.parseInt( args[3] );
+		final double errorRate = Double.parseDouble( args[4] );
 		
 		Component.Factory<?> factory;
-		if ( "CPU".equalsIgnoreCase( args[1] ) )            factory = new Component.CpuFactory();
-		else if ( "GPU".equalsIgnoreCase( args[1] ) )       factory = new Component.GpuFactory();
-		else if ( "MAINBOARD".equalsIgnoreCase( args[1] ) ) factory = new Component.MainboardFactory();
-		else if ( "RAM".equalsIgnoreCase( args[1] ) )       factory = new Component.RamModuleFactory();
-		else {
+		try {
+			factory = Component.makeFactory( args[2] );
+		} catch ( SpaceException e ) {
 			System.err.println( USAGE );
 			System.exit( 1 );
-			return;
+			return;			
 		}
 		
 		Logger.configure();
 
-		new DarkProducer( id, quota, errorRate, factory ).run();
+		new DarkProducer( id, port, quota, errorRate, factory ).run();
 	}	
 	
 	public <C extends Component> DarkProducer( 
-			String id, int quota, double errorRate, Component.Factory<C> f ) throws JMSException {
+			String id, int port, int quota, double errorRate, Component.Factory<C> f ) throws JMSException {
 		this.id = id;
 		this.quota = quota;
 		this.errorRate = errorRate;
 		this.factory = f;
 		
-		this.connection = JMS.openConnection();
+		this.connection = JMS.openConnection( port );
 		this.session    = JMS.createSession( connection );
 
 		this.jms = new JMSWriter( session, f.getType() );
@@ -76,7 +76,7 @@ public final class DarkProducer implements Runnable {
 
 			// produce next component
 			boolean   faulty    = rand.nextDouble() < errorRate; // bernoulli experiment
-			UUID      productId = uuids.generate();
+			String    productId = uuids.generate();
 			Component c         = factory.make( productId, id, faulty );
 
 			assert c.id         == productId;

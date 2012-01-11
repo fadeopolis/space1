@@ -199,11 +199,8 @@ public class Manufacturer extends Processor<Component> {
 			// write the computers to space
 			for (Computer pc : pcs) {
 				// mark them with untested
-				Entry entry = new Entry(pc,
-						LabelCoordinator.newCoordinationData("untested"));
+				writePc( crefPc, pc );
 
-				capi.write(crefPc, MzsConstants.RequestTimeout.DEFAULT, tx,
-						entry);
 				log.info("Worker: %s, build pc: %s", workerId, pc.id.toString());
 			}
 

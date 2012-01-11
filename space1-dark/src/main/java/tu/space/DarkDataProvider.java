@@ -19,15 +19,20 @@ import javax.swing.table.TableModel;
 import tu.space.components.Component;
 import tu.space.components.Computer;
 import tu.space.components.Cpu;
+import tu.space.components.Cpu.Type;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
 import tu.space.gui.DataProvider;
+import tu.space.jms.JMS;
+import tu.space.jms.JMSTopicListener;
 import tu.space.utils.Logger;
 
 public class DarkDataProvider implements DataProvider {
-	public DarkDataProvider() throws JMSException {
-		conn = JMS.openConnection();
+	public DarkDataProvider( int port ) throws JMSException {
+		this.port = port;
+		
+		conn = JMS.openConnection( port );
 		
 		conn.start();
 	}
@@ -81,7 +86,7 @@ public class DarkDataProvider implements DataProvider {
 	public void startProducer( String id, Class<? extends Component> type, int quota, double errorRate ) {
 		try {
 			new Thread(
-				new DarkProducer( id, quota, errorRate, Component.makeFactory( type )  )
+				new DarkProducer( id, port, quota, errorRate, Component.makeFactory( type )  )
 			).start();
 		} catch ( JMSException e ) {
 			log.error(
@@ -94,6 +99,7 @@ public class DarkDataProvider implements DataProvider {
 		}
 	}
 	
+	private final int        port;
 	private final Connection conn;
 	private final Logger     log = Logger.make( getClass() );
 	
@@ -172,5 +178,18 @@ public class DarkDataProvider implements DataProvider {
 		
 		private final Field[]        fields;
 		private final Vector<Object> data;
+	}
+
+	
+	@Override
+	public TableModel orders() throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void placeOrder( Type cpuType, int ramAmount, boolean gpu, int quanitity ) {
+		// TODO Auto-generated method stub
+		
 	}
 }

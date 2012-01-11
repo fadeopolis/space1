@@ -1,5 +1,7 @@
 package tu.space;
 
+import static tu.space.jms.JMS.STR_TESTED_FOR_COMPLETENESS;
+
 import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -11,28 +13,28 @@ import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.Topic;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
-
 import tu.space.components.Computer;
 import tu.space.components.Computer.TestStatus;
+import tu.space.jms.JMS;
 import tu.space.utils.Logger;
 import tu.space.utils.Util;
 
 public class DarkCompletenessTester {
-	public static final String USAGE    = "usage: completeness-tester ID";
-	public static final String SELECTOR = "complete IS NOT NULL";
+	public static final String USAGE    = "usage: completeness-tester ID PORT";
+	public static final String SELECTOR = STR_TESTED_FOR_COMPLETENESS + "=false";
 	
 	public static void main( String... args ) throws JMSException {
-		if ( args.length != 1 ) {
+		if ( args.length != 2 ) {
 			System.err.println( USAGE );
 			System.exit( 1 );
 		}
-		final String id = args[0];
+		final String id   = args[0];
+		final int    port = Integer.parseInt( args[1] );
 		
 		Logger.configure();
 		final Logger log = Logger.make( DarkCompletenessTester.class );
 
-		final Connection conn = new ActiveMQConnectionFactory( DarkServer.BROKER_URL ).createConnection();
+		final Connection conn = JMS.openConnection( port );
 		final Session    sess = conn.createSession( true, Session.SESSION_TRANSACTED );
 	
 		final Queue queue = sess.createQueue( "computer" );

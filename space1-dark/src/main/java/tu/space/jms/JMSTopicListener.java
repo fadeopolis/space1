@@ -1,4 +1,4 @@
-package tu.space;
+package tu.space.jms;
 
 import javax.jms.JMSException;
 import javax.jms.Message;

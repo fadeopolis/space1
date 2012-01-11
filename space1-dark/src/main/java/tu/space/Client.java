@@ -25,7 +25,6 @@ public class Client {
 			conn.start();
 			
 			System.out.println("STARTED CLIENT " + brokerName );
-//			System.out.println("PRESS ENTER TO QUIT");
 			System.out.println( Arrays.toString( args ) );
 			
 			Session    sess = conn.createSession( true, Session.AUTO_ACKNOWLEDGE );

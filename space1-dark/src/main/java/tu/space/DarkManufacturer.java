@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -26,16 +25,17 @@ import tu.space.components.Cpu;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
+import tu.space.jms.JMS;
 import tu.space.utils.DummyFuture;
 import tu.space.utils.Logger;
 import tu.space.utils.UUIDGenerator;
 import tu.space.utils.Util;
 
 public class DarkManufacturer {
-	public static final String USAGE = "usage: manufacturer ID";
+	public static final String USAGE = "usage: manufacturer ID PORT";
 	
 	public static void main( String... args ) throws JMSException {
-		if ( args.length != 1 ) {
+		if ( args.length != 2 ) {
 			System.err.println( USAGE );
 			System.exit( 1 );
 		}
@@ -46,7 +46,7 @@ public class DarkManufacturer {
 
 		final UUIDGenerator uuids = new UUIDGenerator();
 		
-		final Connection conn = JMS.openConnection();
+		final Connection conn = JMS.openConnection( Integer.parseInt( args[1] ));
 		final Session    sess = JMS.createSession( conn );
 	
 		final Queue cpuQ = sess.createQueue( "cpu" );
@@ -95,7 +95,7 @@ public class DarkManufacturer {
 				Future<Mainboard>       mbdF  = getComponent( ex, mbdIn, log, id, "Mainboard" );
 				Future<List<RamModule>> ramF  = getRam( ex, ramIn, log, id );
 				
-				UUID            uuid  = uuids.generate();
+				String          uuid  = uuids.generate();
 				Cpu             cpu   = cpuF.get();
 				Gpu             gpu   = getOrCancel( gpuF );
 				Mainboard       mbd   = mbdF.get();
@@ -175,11 +175,13 @@ public class DarkManufacturer {
 				ram.add( (RamModule) ((ObjectMessage) in).getObject() );
 				log.info("%s got a RAM module", id);
 				
-				in = queue.receiveNoWait();
-				if ( in != null ) {
-					ram.add( (RamModule) ((ObjectMessage) in).getObject() );
-					log.info("%s got a RAM module", id);
-				}				
+				for ( int i = 0; i < 3; i++ ) {
+					in = queue.receiveNoWait();
+					if ( in != null ) {
+						ram.add( (RamModule) ((ObjectMessage) in).getObject() );
+						log.info("%s got a RAM module", id);
+					}									
+				}
 					
 				return ram;
 			}

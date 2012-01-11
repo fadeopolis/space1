@@ -1,5 +1,7 @@
 package tu.space;
 
+import static tu.space.jms.JMS.*;
+
 import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -11,27 +13,31 @@ import javax.jms.Queue;
 import javax.jms.Session;
 import javax.jms.Topic;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
-
 import tu.space.components.Computer;
+import tu.space.jms.JMS;
 import tu.space.utils.Logger;
 import tu.space.utils.Util;
 
 public class DarkLogistician {
-	public static final String USAGE    = "usage: logistician ID";
-	public static final String SELECTOR = "(defect IS NULL) AND (complete IS NULL)";
-	
+	public static final String USAGE    = "usage: logistician ID PORT";
+	public static final String SELECTOR = String.format(
+			"(%s = true) AND (%s = true)",
+			STR_TESTED_FOR_COMPLETENESS, 
+			STR_TESTED_FOR_DEFECT 
+	);
+
 	public static void main( String... args ) throws JMSException {
-		if ( args.length != 1 ) {
+		if ( args.length != 2 ) {
 			System.err.println( USAGE );
-			System.exit( 1 );
+			System.exit( 2 );
 		}
-		final String id = args[0];
-		
+		final String id   = args[0];
+		final int    port = Integer.parseInt( args[1] );
+
 		Logger.configure();
 		final Logger log = Logger.make( DarkLogistician.class );
 
-		final Connection conn = new ActiveMQConnectionFactory( DarkServer.BROKER_URL ).createConnection();
+		final Connection conn = JMS.openConnection( port );
 		final Session    sess = conn.createSession( true, Session.SESSION_TRANSACTED );
 	
 		final Queue storageQ = sess.createQueue( "storage" );
@@ -51,10 +57,7 @@ public class DarkLogistician {
 
 		final MessageProducer computerTOut = sess.createProducer( computerT );
 		
-		MessageConsumer in = sess.createConsumer( 
-		                            computerQ, 
-		                            "(defect IS NULL) AND (complete IS NULL)"
-		                     );
+		MessageConsumer in = sess.createConsumer( computerQ, SELECTOR );
 		in.setMessageListener( new MessageListener() {
 			@Override
 			public void onMessage( Message message ) {
