@@ -6,6 +6,7 @@ import java.awt.event.WindowListener;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
@@ -16,7 +17,9 @@ import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.Entry;
+import org.mozartspaces.core.MzsConstants;
 import org.mozartspaces.core.MzsCore;
+import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.notifications.Notification;
 import org.mozartspaces.notifications.NotificationListener;
 import org.mozartspaces.notifications.NotificationManager;
@@ -25,9 +28,11 @@ import org.mozartspaces.notifications.Operation;
 import tu.space.components.Component;
 import tu.space.components.Computer;
 import tu.space.components.Cpu;
+import tu.space.components.Cpu.Type;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
+import tu.space.contracts.Order;
 import tu.space.gui.DataProvider;
 import tu.space.util.ContainerCreator;
 
@@ -105,6 +110,11 @@ public class SpaceDataProvider implements DataProvider {
 	}
 
 	@Override
+	public TableModel orders() throws Exception {
+		return new SpaceTableModel(Order.class, core, ContainerCreator.getOrderContainer( space, capi ) );
+	}
+	
+	@Override
 	public WindowListener windowListener() {
 		return new WindowAdapter() {
 			@Override
@@ -112,6 +122,19 @@ public class SpaceDataProvider implements DataProvider {
 				//close server
 			}
 		};
+	}
+	
+	/**
+	 * A order to be sended to space ^^
+	 */
+	@Override
+	public void placeOrder(Type cpuType, int ramAmount, boolean gpu, int quanitity) {
+		try {
+			ContainerReference cref = ContainerCreator.getOrderContainer(space, capi);
+			capi.write(cref, new Entry(new Order(cpuType, ramAmount, gpu, quanitity)));
+		} catch (MzsCoreException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	@Override

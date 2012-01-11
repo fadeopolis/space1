@@ -26,6 +26,7 @@ import org.mozartspaces.notifications.Operation;
 import tu.space.components.Component;
 import tu.space.components.Computer;
 import tu.space.components.Cpu;
+import tu.space.components.Cpu.Type;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
 import tu.space.components.RamModule;
@@ -218,5 +219,18 @@ public class SpaceDataProvider implements DataProvider {
 		
 		private final Field[]        fields;
 		private final Vector<Object> data;
+	}
+
+	@Override
+	public TableModel orders() throws Exception {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void placeOrder(Type cpuType, int ramAmount, boolean gpu,
+			int quanitity) {
+		// TODO Auto-generated method stub
+		
 	}
 }
