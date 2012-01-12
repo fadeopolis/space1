@@ -221,7 +221,7 @@ public abstract class ContainerCreator{
 	 * 		DUAL_CORE
 	 * 		QUAD_CORE
 	 */
-	public static LabelData labelForCpuType(final Type cpuType){
+	public static LabelData labelForCpuType( final Type cpuType ){
 		if(cpuType.equals( Type.SINGLE_CORE) ){ 
 					return label( SINGLE_CORE );
 		} else if (cpuType.equals( Type.DUAL_CORE) ){

@@ -97,9 +97,10 @@ public class Manufacturer extends Processor<Component> {
 			order = (Order) capi.read(crefOrder, fifo(1), ContainerCreator.DEFAULT_TX_TIMEOUT, tx).get(0);
 			
 			//build as many pc's as possible form space
-			for(int i = 0; i < order.quantitiy; i++){
-				buildPc( order );
-			}
+			
+			//TODO see how many pc's we can build
+			buildPc( order );
+			
 			//commit after loop
 			capi.commitTransaction( tx );
 		} catch (MzsCoreException e) {
@@ -114,7 +115,7 @@ public class Manufacturer extends Processor<Component> {
 		registerNotification(crefMainboards, Operation.WRITE);
 		registerNotification(crefRam, 		 Operation.WRITE);
 		
-		registerNotification(crefOrder, 	 Operation.TAKE);
+		registerNotification(crefOrder, 	 Operation.DELETE);
 	}
 
 	@Override
@@ -150,13 +151,13 @@ public class Manufacturer extends Processor<Component> {
 			//Build spec. cpu-type
 			Cpu cpu;
 			
-			if(order.cpuType == Type.SINGLE_CORE){
+			if( order.cpuType.equals(Type.SINGLE_CORE) ){
 				cpu = (Cpu) capi.take(crefCpu, LabelCoordinator.newSelector(ContainerCreator.SINGLE_CORE, 1), 
 						MzsConstants.RequestTimeout.ZERO, tx).get(0);
-			} else if(order.cpuType == Type.DUAL_CORE){
+			} else if (order.cpuType.equals(Type.DUAL_CORE) ){
 				cpu = (Cpu) capi.take(crefCpu, LabelCoordinator.newSelector(ContainerCreator.DUAL_CORE, 1), 
 						MzsConstants.RequestTimeout.ZERO, tx).get(0);
-			} else if(order.cpuType == Type.QUAD_CORE){
+			} else if( order.cpuType.equals(Type.QUAD_CORE) ){
 				cpu = (Cpu) capi.take(crefCpu, LabelCoordinator.newSelector(ContainerCreator.QUAD_CORE, 1), 
 						MzsConstants.RequestTimeout.ZERO, tx).get(0);
 			} else {
@@ -165,7 +166,7 @@ public class Manufacturer extends Processor<Component> {
 			}
 			
 			//precondition ram has to be 1, 2 or 4, spec. in order ram quantity field
-			List<RamModule> rams = capi.take(crefRam, any(order.ramQuantity),  RequestTimeout.TRY_ONCE, tx );
+			List<RamModule> rams = capi.take(crefRam, any( order.ramQuantity ),  RequestTimeout.TRY_ONCE, tx );
 	
 			// optional parts
 			Gpu gpu = null;

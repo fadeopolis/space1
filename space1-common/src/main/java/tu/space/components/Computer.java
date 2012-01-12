@@ -17,6 +17,7 @@ public final class Computer extends Product {
 	public final String defectTesterId;
 	public final String completenessTesterId;
 	public final String logisticianId;
+	public final String orderId;
 	
 	public final Cpu             cpu;
 	public final Gpu             gpu;
@@ -32,7 +33,7 @@ public final class Computer extends Product {
 	}
 	public Computer( String id, String manufacturerId, Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram ) {
 		this( 
-			id, manufacturerId, null, null, null, 
+			id, manufacturerId, null, null, null, null,
 			cpu, gpu, mainboard, ram, 
 			TestStatus.UNTESTED, TestStatus.UNTESTED, false
 		);		
@@ -40,13 +41,14 @@ public final class Computer extends Product {
 
 	private Computer( 
 			String id, String manufacturerId, String defectTesterId, String completenessTesterId, String logisticianId,
-			Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram,
+			String orderId, Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram,
 			TestStatus defect, TestStatus complete, boolean finished
 	) {
 		this.manufacturerId       = manufacturerId;
 		this.defectTesterId       = defectTesterId;
 		this.completenessTesterId = completenessTesterId;
 		this.logisticianId        = logisticianId;
+		this.orderId 			  = orderId;
 
 		this.id         = id;
 		this.cpu        = cpu;
@@ -66,7 +68,7 @@ public final class Computer extends Product {
 		assert status != TestStatus.UNTESTED;
 		
 		return new Computer(
-			id, manufacturerId, testerId, completenessTesterId, logisticianId,
+			id, manufacturerId, testerId, completenessTesterId, logisticianId, null,
 			cpu, gpu, mainboard, ramModules,
 			status, complete, false
 		);
@@ -76,14 +78,14 @@ public final class Computer extends Product {
 		assert status   != TestStatus.UNTESTED;
 		
 		return new Computer(
-			id, manufacturerId, defectTesterId, testerId, logisticianId,
+			id, manufacturerId, defectTesterId, testerId, logisticianId, null,
 			cpu, gpu, mainboard, ramModules,
 			defect, status, false
 		);
 	}
-	public Computer tagAsFinished( String logisticianId ) {
+	public Computer tagAsFinished( String logisticianId , String orderId) {
 		return new Computer(
-				id, manufacturerId, defectTesterId, completenessTesterId, logisticianId, 
+				id, manufacturerId, defectTesterId, completenessTesterId, logisticianId, orderId,
 				cpu, gpu, mainboard, ramModules,
 				defect, complete, true
 		);
@@ -134,6 +136,7 @@ public final class Computer extends Product {
 		   + ", defectTesterId=" + defectTesterId
 		   + ", completenessTesterId=" + completenessTesterId
 		   + ", logisticianId=" + logisticianId
+		   + ", orderId=" + orderId
 		   + ", cpu=" + cpu
 		   + ", gpu=" + gpu
 		   + ", mainboard=" + mainboard
