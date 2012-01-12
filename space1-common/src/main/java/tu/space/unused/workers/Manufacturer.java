@@ -102,7 +102,7 @@ public class Manufacturer extends Worker {
 							middleware.ramModules().send( rams.remove( 0 ) );
 						rams.add( ram );
 						
-						middleware.allComputers().send( new Computer( uuid, id, cpu, gpu, mbd, rams ) );
+						middleware.allComputers().send( new Computer( uuid, id, null, cpu, gpu, mbd, rams ) );
 						LOG.info("%s produced a computer", Manufacturer.this);
 
 						middleware.commit();

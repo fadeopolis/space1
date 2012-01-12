@@ -87,7 +87,7 @@ public class DarkManufacturer {
 				}
 				log.info("%s is using %d pieces of RAM", id, ram.size() );
 					
-				Computer c = new Computer( uuid, id, cpu, gpu, mbd, ram );				
+				Computer c = new Computer( uuid, id, null, cpu, gpu, mbd, ram );				
 				
 				// simulate work
 				Util.sleep();

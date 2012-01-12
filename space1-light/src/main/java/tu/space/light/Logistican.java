@@ -60,7 +60,7 @@ public class Logistican extends Processor<Computer> {
 				RequestTimeout.TRY_ONCE, 
 				tx ).get( 0 );
 
-		pc = pc.tagAsFinished( workerId , contract.orderId );
+		pc = pc.tagAsFinished( workerId );
 
 		if ( !pc.isComplete() || pc.hasDefect() ) {
 			log.info( "%s: Got an bad PC %s", this, pc.id );

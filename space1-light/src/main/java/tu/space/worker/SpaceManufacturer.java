@@ -189,7 +189,7 @@ public class SpaceManufacturer implements NotificationListener {
 						takeGpu = new ArrayList<Component>();
 						takeGpu.add(null);
 					}
-					pcs.add(new Computer(uuids.generate(), workerId, (Cpu) takeCpu.get(0), (Gpu) takeGpu.get(0), (Mainboard) takeMainboard.get(0), takeRams));
+					pcs.add(new Computer(uuids.generate(), workerId, null, (Cpu) takeCpu.get(0), (Gpu) takeGpu.get(0), (Mainboard) takeMainboard.get(0), takeRams));
 				}
 			}
 			
@@ -329,7 +329,7 @@ public class SpaceManufacturer implements NotificationListener {
 				}
 
 				//assemble pc
-				pc = new Computer(uuids.generate(), workerId, cpus.get(0), gpus.get(0), mainboards.get(0), rams);
+				pc = new Computer(uuids.generate(), workerId, null, cpus.get(0), gpus.get(0), mainboards.get(0), rams);
 
 				//label as untested
 				Entry entry = new Entry(pc, LabelCoordinator.newCoordinationData("untested"));

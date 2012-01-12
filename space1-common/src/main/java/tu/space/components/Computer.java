@@ -28,12 +28,12 @@ public final class Computer extends Product {
 	public final TestStatus      complete;
 	public final boolean         finished;
 	
-	public Computer( String id, String manufacturerId, Cpu cpu, Gpu gpu, Mainboard mainboard, RamModule... ram ) {
-		this( id, manufacturerId, cpu, gpu, mainboard, Arrays.asList( ram ) );
+	public Computer( String id, String manufacturerId, String orderId, Cpu cpu, Gpu gpu, Mainboard mainboard, RamModule... ram ) {
+		this( id, manufacturerId, orderId, cpu, gpu, mainboard, Arrays.asList( ram ) );
 	}
-	public Computer( String id, String manufacturerId, Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram ) {
+	public Computer( String id, String manufacturerId, String orderId, Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram ) {
 		this( 
-			id, manufacturerId, null, null, null, null,
+			id, manufacturerId, orderId, null, null, null,
 			cpu, gpu, mainboard, ram, 
 			TestStatus.UNTESTED, TestStatus.UNTESTED, false
 		);		
@@ -83,7 +83,7 @@ public final class Computer extends Product {
 			defect, status, false
 		);
 	}
-	public Computer tagAsFinished( String logisticianId , String orderId) {
+	public Computer tagAsFinished( String logisticianId ) {
 		return new Computer(
 				id, manufacturerId, defectTesterId, completenessTesterId, logisticianId, orderId,
 				cpu, gpu, mainboard, ramModules,

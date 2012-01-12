@@ -175,7 +175,7 @@ public class Manufacturer extends Processor<Component> {
 			}
 			
 			// assemble pc
-			Computer pc = new Computer(uuids.generate(), workerId, cpu, gpu, mbd, rams);
+			Computer pc = new Computer(uuids.generate(), workerId, null, cpu, gpu, mbd, rams);
 			
 			writePc(crefPc, pc);
 			

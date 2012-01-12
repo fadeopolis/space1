@@ -112,12 +112,12 @@ public class SpaceLogistican implements NotificationListener {
 				//set pc finish
 				if ( pc.hasDefect() || !pc.isComplete() ) {
 					//move to trash
-					pc = pc.tagAsFinished(workerId, null);
+					pc = pc.tagAsFinished(workerId );
 					Entry entry = new Entry(pc);
 					capi.write(crefPcDefect, RequestTimeout.DEFAULT, tx, entry);
 					log.info("Logistican: %s, tested completeness of Pc: %s, result uncomplete move to trash", workerId, pc.id.toString());
 				} else {
-					pc = pc.tagAsFinished(workerId, null);
+					pc = pc.tagAsFinished(workerId);
 					Entry entry = new Entry(pc);		
 					capi.write(crefStorage, RequestTimeout.DEFAULT, tx, entry);
 					log.info("Logistican: %s, delivered Pc: %s", workerId, pc.id.toString());					
