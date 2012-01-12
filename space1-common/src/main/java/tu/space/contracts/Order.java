@@ -26,6 +26,8 @@ public class Order implements Serializable{
 	public final List<String> computerIds = new ArrayList<String>();
 	
 	public final int 	 quantitiy;
+	private int 		 produced;
+	private int 		 ready;
 	
 	public final boolean finished;
 	
@@ -69,6 +71,33 @@ public class Order implements Serializable{
 		if( (computerIds.size() - quantitiy) == 0 ){
 			throw new SpaceException("Ready to finish order");
 		}
+	}
+	
+	/**
+	 * Increment produced pc's for order
+	 * 
+	 * @return int
+	 */
+	public int incProduced(){
+		return produced++;
+	}
+	
+	/**
+	 * Decrement produced pc's for order, if a pc was defect
+	 * 
+	 * @return int
+	 */
+	public int decProduced(){
+		return produced--;
+	}
+	
+	/**
+	 * Finished pc's without errors
+	 * 
+	 * @return int
+	 */
+	public int incReady(){
+		return ready++;
 	}
 	
 	public List<String> getComputerId(){
