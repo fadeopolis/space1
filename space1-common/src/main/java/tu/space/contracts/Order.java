@@ -4,7 +4,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import tu.space.components.Computer;
 import tu.space.components.Cpu.Type;
+import tu.space.utils.SpaceException;
 import tu.space.utils.UUIDGenerator;
 
 /**
@@ -27,6 +29,8 @@ public class Order implements Serializable{
 	
 	public final boolean finished;
 	
+	private boolean flag = false;
+	
 	public Order(final Type type, final int ramQuantity, final boolean gpu, final int quantity){
 		UUIDGenerator uuidgen = new UUIDGenerator();
 		this.orderId = uuidgen.generate();
@@ -38,7 +42,7 @@ public class Order implements Serializable{
 		this.finished	 = false;
 	}
 	
-	private Order(final String orderId, final Type cpuType, final int ramQuantity, final boolean gpu, final int quantity, final boolean finished, final List<String> computerIds) {
+	private Order(final String orderId, final Type cpuType, final int ramQuantity, final boolean gpu, final int quantity, final boolean finished, final List<String> computerIds, final boolean flag) {
 		this.orderId	 = orderId;
 		this.cpuType 	 = cpuType;
 		this.ramQuantity = ramQuantity;
@@ -46,10 +50,25 @@ public class Order implements Serializable{
 		this.quantitiy   = quantity;
 		this.finished	 = true;
 		this.computerIds.addAll(computerIds);
+		this.flag = flag;
 	}
 
-	public void setComputerId(final String uuid){
+	/**
+	 * Add a computer to the order, and mark finish if 
+	 * the size of pc's equals the quantity.
+	 * 
+	 * @param uuid
+	 * @throws SpaceException
+	 * 		quantity reached mark finished
+	 */
+	public synchronized void setComputerId(final String uuid) {
+		if(flag) throw new SpaceException("Max quanitiy reached");
 		computerIds.add(uuid);
+		
+		//mark finished
+		if( (computerIds.size() - quantitiy) == 0 ){
+			throw new SpaceException("Ready to finish order");
+		}
 	}
 	
 	public List<String> getComputerId(){
@@ -74,7 +93,8 @@ public class Order implements Serializable{
 	 * @param finished the finished to set
 	 */
 	public Order markFinished() {
-		return new Order(orderId, cpuType, ramQuantity, gpu, quantitiy, true, computerIds);
+		flag = true;
+		return new Order(orderId, cpuType, ramQuantity, gpu, quantitiy, true, computerIds, flag);
 	}
 	
 	/**
@@ -103,5 +123,30 @@ public class Order implements Serializable{
 	 */
 	public int getQuantitiy() {
 		return quantitiy;
+	}
+	
+	/**
+	 * Check if pc is equals to the spec.
+	 * 
+	 * @param pc
+	 * @return boolean
+	 */
+	public boolean equals(final Computer pc){
+		if(!(pc.cpu.type.equals(cpuType))) return false;
+		if(pc.ramModules.size() != ramQuantity) return false;
+		if( (gpu && (pc.gpu == null)) || (!gpu && (pc.gpu != null)) ) return false;
+		
+		return true;
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		return "Order [orderId=" + orderId + ", cpuType=" + cpuType
+				+ ", ramQuantity=" + ramQuantity + ", gpu=" + gpu
+				+ ", computerIds=" + computerIds + ", quantitiy=" + quantitiy
+				+ ", finished=" + finished + ", flag=" + flag + "]";
 	}
 }

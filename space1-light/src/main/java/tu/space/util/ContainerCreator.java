@@ -1,5 +1,10 @@
 package tu.space.util;
 
+import static tu.space.util.ContainerCreator.DUAL_CORE;
+import static tu.space.util.ContainerCreator.QUAD_CORE;
+import static tu.space.util.ContainerCreator.SINGLE_CORE;
+import static tu.space.util.ContainerCreator.label;
+
 import java.net.URI;
 import java.util.Arrays;
 
@@ -14,11 +19,13 @@ import org.mozartspaces.capi3.LabelCoordinator.LabelSelector;
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.DefaultMzsCore;
+import org.mozartspaces.core.Entry;
 import org.mozartspaces.core.MzsConstants.Container;
 import org.mozartspaces.core.MzsConstants.RequestTimeout;
 import org.mozartspaces.core.MzsCore;
 import org.mozartspaces.core.MzsCoreException;
 
+import tu.space.components.Cpu;
 import tu.space.components.Cpu.Type;
 
 /**
@@ -89,7 +96,7 @@ public abstract class ContainerCreator{
 	 * @throws MzsCoreException
 	 */
 	public static ContainerReference getCpuContainer( final URI space, final Capi capi ) throws MzsCoreException{
-		return getContainer( capi, space, "CpuContainer", new AnyCoordinator(), new LabelCoordinator() );
+		return getContainer( capi, space, "CpuContainer", new LabelCoordinator() );
 	}
 	
 	/**
@@ -203,5 +210,24 @@ public abstract class ContainerCreator{
 	}
 	public final static LabelSelector selector( String label ) {
 		return LabelCoordinator.newSelector( label );
+	}
+	
+	/**
+	 * Retrun the corresponding labeldata for cpu type
+	 * 
+	 * @param cpuType
+	 * @return Label for 
+	 * 		SINGEL_CORE
+	 * 		DUAL_CORE
+	 * 		QUAD_CORE
+	 */
+	public static LabelData labelForCpuType(final Type cpuType){
+		if(cpuType.equals( Type.SINGLE_CORE) ){ 
+					return label( SINGLE_CORE );
+		} else if (cpuType.equals( Type.DUAL_CORE) ){
+					return label( DUAL_CORE );
+		} else if (cpuType.equals( Type.QUAD_CORE) ){
+				return label( QUAD_CORE );					
+		} else return null;
 	}
 }

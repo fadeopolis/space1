@@ -3,6 +3,7 @@ package tu.space.light;
 import static tu.space.util.ContainerCreator.DEFAULT_TX_TIMEOUT;
 import static tu.space.util.ContainerCreator.SELECTOR_TESTED_FOR_COMPlETENESS;
 import static tu.space.util.ContainerCreator.SELECTOR_TESTED_FOR_DEFECT;
+import static tu.space.util.ContainerCreator.fifo;
 
 import java.util.Arrays;
 import java.util.List;
@@ -12,6 +13,7 @@ import org.mozartspaces.capi3.CountNotMetException;
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.Entry;
+import org.mozartspaces.core.MzsConstants;
 import org.mozartspaces.core.MzsConstants.RequestTimeout;
 import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.core.TransactionReference;
@@ -22,6 +24,7 @@ import tu.space.components.Computer.TestStatus;
 import tu.space.util.ContainerCreator;
 import tu.space.util.LogBack;
 import tu.space.utils.Logger;
+import tu.space.utils.SpaceException;
 
 public class Logistican extends Processor<Computer> {
 	
@@ -35,17 +38,19 @@ public class Logistican extends Processor<Computer> {
 	public Logistican(String... args) throws MzsCoreException {
 		super(args);
 
-		pcs = ContainerCreator.getPcContainer(this.space, capi);
-		trash = ContainerCreator.getPcDefectContainer(this.space, capi);
-		storage = ContainerCreator.getStorageContainer(this.space, capi);
+		pcs = ContainerCreator.getPcContainer(         this.space, capi );
+		trash = ContainerCreator.getPcDefectContainer( this.space, capi );
+		storage = ContainerCreator.getStorageContainer(this.space, capi );	
+		order = ContainerCreator.getOrderContainer(    this.space, capi );
 	}
 
 	public Logistican(String id, Capi capi, int space) throws MzsCoreException {
 		super(id, capi, space);
 
-		pcs = ContainerCreator.getPcContainer(this.space, capi);
-		trash = ContainerCreator.getPcDefectContainer(this.space, capi);
-		storage = ContainerCreator.getStorageContainer(this.space, capi);
+		pcs = ContainerCreator.getPcContainer(         this.space, capi );
+		trash = ContainerCreator.getPcDefectContainer( this.space, capi );
+		storage = ContainerCreator.getStorageContainer(this.space, capi );
+		order = ContainerCreator.getOrderContainer(    this.space, capi );
 	}
 
 	public void storePc( TransactionReference tx ) throws MzsCoreException {
@@ -63,6 +68,23 @@ public class Logistican extends Processor<Computer> {
 			capi.write( trash, new Entry( pc ) );
 		} else {
 			log.info( "%s: Got a mighty fine PC %s", this, pc.id );
+						
+			//check if the pc meets the spec.
+			if(contract != null && contract.equals(pc)){
+				try{
+					log.info("Pc here add %s", pc);
+					
+					contract.setComputerId(pc.id);
+					
+					log.info("The order state is: %s", contract);
+				} catch (SpaceException ex){
+					//quantity reached 
+					contract = contract.markFinished();
+					//take order from space 
+					log.info("Order complete delete it form space!");
+					capi.delete(order, fifo(1), MzsConstants.Selecting.DEFAULT_COUNT, tx);
+				}
+			}
 			
 			capi.write( storage, new Entry( pc ) );
 		}
@@ -84,6 +106,7 @@ public class Logistican extends Processor<Computer> {
 		}
 		
 		registerNotification( pcs, Operation.WRITE );
+		registerNotification( order, Operation.WRITE );
 	}
 	@Override
 	protected boolean process( Computer pc, Operation o, List<CoordinationData> cds, TransactionReference tx ) throws MzsCoreException {
@@ -104,4 +127,5 @@ public class Logistican extends Processor<Computer> {
 	private final ContainerReference pcs;
 	private final ContainerReference trash;
 	private final ContainerReference storage;
+	private final ContainerReference order;
 }
