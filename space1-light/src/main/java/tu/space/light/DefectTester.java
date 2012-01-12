@@ -44,7 +44,7 @@ public class DefectTester extends Tester {
 			pc = pc.tagAsTestedForDefect( workerId, TestStatus.YES );
 
 			// dismantle defect PC
-			if ( pc.cpu       != null && !pc.cpu.hasDefect       ) capi.write( cpus, new Entry( pc.cpu ) );
+			if ( pc.cpu       != null && !pc.cpu.hasDefect       ) capi.write( cpus, new Entry( pc.cpu, labelForCpuType(pc.cpu.type) ) );
 			if ( pc.gpu       != null && !pc.gpu.hasDefect       ) capi.write( gpus, new Entry( pc.gpu ) );
 			if ( pc.mainboard != null && !pc.mainboard.hasDefect ) capi.write( mbds, new Entry( pc.mainboard ) );
 			for ( RamModule ram : pc.ramModules )

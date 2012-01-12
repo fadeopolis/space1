@@ -113,6 +113,8 @@ public class Manufacturer extends Processor<Component> {
 		registerNotification(crefGpu,		 Operation.WRITE);
 		registerNotification(crefMainboards, Operation.WRITE);
 		registerNotification(crefRam, 		 Operation.WRITE);
+		
+		registerNotification(crefOrder, 	 Operation.TAKE);
 	}
 
 	@Override
