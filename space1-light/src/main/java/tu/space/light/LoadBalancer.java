@@ -1,10 +1,15 @@
 package tu.space.light;
 
+import static tu.space.util.ContainerCreator.ANY_MAX;
+import static tu.space.util.ContainerCreator.FIFO_MAX;
+
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.mozartspaces.core.Capi;
@@ -19,14 +24,15 @@ import org.mozartspaces.notifications.NotificationListener;
 import org.mozartspaces.notifications.NotificationManager;
 import org.mozartspaces.notifications.Operation;
 
-import ch.qos.logback.classic.Level;
-
 import tu.space.components.Component;
 import tu.space.util.ContainerCreator;
 import tu.space.util.LogBack;
 import tu.space.utils.Logger;
+import ch.qos.logback.classic.Level;
 
-import static tu.space.util.ContainerCreator.*;
+import static org.mozartspaces.notifications.Operation.DELETE;
+import static org.mozartspaces.notifications.Operation.TAKE;
+import static org.mozartspaces.notifications.Operation.WRITE;
 
 public class LoadBalancer implements Runnable {
 	public static void main( String[] args ) throws MzsCoreException, InterruptedException {
@@ -56,8 +62,8 @@ public class LoadBalancer implements Runnable {
 			sp.add( new Space( ContainerCreator.getSpaceURI( port ) ) );
 		}
 		
-		this.spaces = Collections.unmodifiableList( sp );
-		
+		this.spaces  = Collections.unmodifiableList( sp );
+		this.hasZero = new HashSet<LoadBalancer.Space>();
 	}
 	
 	@Override
@@ -84,17 +90,19 @@ public class LoadBalancer implements Runnable {
 	private final String      name;
 	private final Capi        capi;
 	private final List<Space> spaces;
+	private final Set<Space>  hasZero;
 	private final Logger      log  = Logger.make( getClass() );
 	
 	private final class Space {
 		public Space( URI uri ) throws MzsCoreException, InterruptedException {
 			this.nm  = new NotificationManager( capi.getCore() );
 			
-			ContainerReference cpus = ContainerCreator.getCpuContainer( uri, capi );
-			ContainerReference gpus = ContainerCreator.getGpuContainer( uri, capi );
-			ContainerReference mbds = ContainerCreator.getMainboardContainer( uri, capi );
-			ContainerReference rams = ContainerCreator.getRamContainer( uri, capi );
-
+			ContainerReference cpus   = ContainerCreator.getCpuContainer( uri, capi );
+			ContainerReference gpus   = ContainerCreator.getGpuContainer( uri, capi );
+			ContainerReference mbds   = ContainerCreator.getMainboardContainer( uri, capi );
+			ContainerReference rams   = ContainerCreator.getRamContainer( uri, capi );
+			ContainerReference orders = ContainerCreator.getOrderContainer( uri, capi );
+			
 			// count whats here at startup
 			numCPUs = new AtomicInteger( capi.test( cpus, ANY_MAX,  MzsConstants.RequestTimeout.DEFAULT, null ) );
 			numGPUs = new AtomicInteger( capi.test( gpus, ANY_MAX,  MzsConstants.RequestTimeout.DEFAULT, null ) );
@@ -102,10 +110,11 @@ public class LoadBalancer implements Runnable {
 			numRAMs = new AtomicInteger( capi.test( rams, ANY_MAX,  MzsConstants.RequestTimeout.DEFAULT, null ) );
 			
 			// install listeners
-			nots[0] = nm.createNotification( ContainerCreator.getCpuContainer( uri, capi ), new Counter( numCPUs ), Operation.TAKE, Operation.DELETE, Operation.WRITE );
-			nots[1] = nm.createNotification( ContainerCreator.getGpuContainer( uri, capi ), new Counter( numGPUs ), Operation.TAKE, Operation.DELETE, Operation.WRITE );
-			nots[2] = nm.createNotification( ContainerCreator.getMainboardContainer( uri, capi ), new Counter( numMBDs ), Operation.TAKE, Operation.DELETE, Operation.WRITE );
-			nots[3] = nm.createNotification( ContainerCreator.getRamContainer( uri, capi ), new Counter( numRAMs ), Operation.TAKE, Operation.DELETE, Operation.WRITE );
+			nots[0] = nm.createNotification( cpus,   new Counter( numCPUs ), TAKE, DELETE, WRITE );
+			nots[1] = nm.createNotification( gpus,   new Counter( numGPUs ), TAKE, DELETE, WRITE );
+			nots[2] = nm.createNotification( mbds,   new Counter( numMBDs ), TAKE, DELETE, WRITE );
+			nots[3] = nm.createNotification( rams,   new Counter( numRAMs ), TAKE, DELETE, WRITE );
+			nots[4] = nm.createNotification( orders, new Counter( numRAMs ), TAKE, DELETE, WRITE );
 
 			log.info( "#CPU: " + numCPUs.get() );
 			log.info( "#GPU: " + numGPUs.get() );
@@ -120,7 +129,7 @@ public class LoadBalancer implements Runnable {
 		final AtomicInteger numMBDs;
 		final AtomicInteger numRAMs;
 		
-		final Notification[] nots = new Notification[4];
+		final Notification[] nots = new Notification[5];
 		
 		void clean() {
 			for ( Notification n : nots ) try { n.destroy(); } catch ( MzsCoreException e ) {}
@@ -167,5 +176,11 @@ public class LoadBalancer implements Runnable {
 				}.start();
 			}
 		}
+	}
+
+	private static final class Orders implements NotificationListener {
+		@Override
+		public void entryOperationFinished( Notification source, Operation operation, List<? extends Serializable> entries ) {
+		}		
 	}
 }
