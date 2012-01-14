@@ -1,5 +1,11 @@
 package tu.space.light;
 
+import static tu.space.util.ContainerCreator.LABEL_TESTED_FOR_COMPLETENESS;
+import static tu.space.util.ContainerCreator.LABEL_TESTED_FOR_DEFECT;
+import static tu.space.util.ContainerCreator.LABEL_UNTESTED_FOR_COMPLETENESS;
+import static tu.space.util.ContainerCreator.LABEL_UNTESTED_FOR_DEFECT;
+import static tu.space.util.ContainerCreator.label;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,8 +14,8 @@ import java.util.Random;
 import org.mozartspaces.capi3.CoordinationData;
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
-import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.Entry;
+import org.mozartspaces.core.MzsConstants;
 import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.core.TransactionReference;
 
@@ -18,26 +24,7 @@ import tu.space.components.Computer.TestStatus;
 import tu.space.util.ContainerCreator;
 import tu.space.utils.Logger;
 
-import static tu.space.util.ContainerCreator.*;
-
 public abstract class Worker implements Runnable {
-	public Worker( String[] args ) {
-		if ( args.length != 2 ) {
-			System.err.println("usage: " + getClass().getSimpleName() + " NAME PORT" );
-			System.exit( 1 );
-		} else {
-			try{
-				Integer.parseInt(args[1]);
-			} catch (NumberFormatException e){
-				System.err.println("usage: " + getClass().getSimpleName() + " NAME PORT, Port is not a number");
-			}
-		}
-		
-		this.workerId = args[0];
-		this.capi     = new Capi( DefaultMzsCore.newInstance( 0 ) );
-		this.space    = ContainerCreator.getSpaceURI( Integer.parseInt( args[1] ) );
-	}
-	
 	public Worker( String name, Capi capi, int spacePort ) {
 		this.workerId = name;
 		this.capi     = capi;
@@ -55,6 +42,12 @@ public abstract class Worker implements Runnable {
 		return getClass().getSimpleName() + " " + workerId;
 	}
 	
+	protected TransactionReference beginTransaction() throws MzsCoreException {
+		return capi.createTransaction( MzsConstants.TransactionTimeout.INFINITE, space );
+	}
+	protected void commit( TransactionReference tx ) throws MzsCoreException {
+		capi.commitTransaction( tx );
+	}
 	protected void rollback( TransactionReference tx ) {
 		try {
 			if ( tx != null ) capi.rollbackTransaction( tx );
@@ -87,15 +80,20 @@ public abstract class Worker implements Runnable {
 		} else {
 			cd.add( LABEL_TESTED_FOR_COMPLETENESS );
 		}
+		if ( pc.orderId != null ) {
+			cd.add( label(pc.orderId) );
+		}		
 		
 		capi.write( cref, new Entry( pc, cd ) );	
 	}
 	
 	public    final String workerId;
-	protected final Capi   capi;
-	protected final URI    space;
+	
 	protected final Logger log  = Logger.make( getClass() );
 	protected final Random rand = new Random();
+
+	protected final URI  space;
+	private   final Capi capi;
 	
 	private static final int MAX_WORK_SLEEP_TIME = 3000;
 }

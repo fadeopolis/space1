@@ -7,9 +7,7 @@ import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.mozartspaces.core.Capi;
@@ -63,7 +61,7 @@ public class LoadBalancer implements Runnable {
 		}
 		
 		this.spaces  = Collections.unmodifiableList( sp );
-		this.hasZero = new HashSet<LoadBalancer.Space>();
+//		this.hasZero = new HashSet<LoadBalancer.Space>();
 	}
 	
 	@Override
@@ -90,7 +88,7 @@ public class LoadBalancer implements Runnable {
 	private final String      name;
 	private final Capi        capi;
 	private final List<Space> spaces;
-	private final Set<Space>  hasZero;
+//	private final Set<Space>  hasZero;
 	private final Logger      log  = Logger.make( getClass() );
 	
 	private final class Space {
@@ -178,6 +176,7 @@ public class LoadBalancer implements Runnable {
 		}
 	}
 
+	@SuppressWarnings("unused")
 	private static final class Orders implements NotificationListener {
 		@Override
 		public void entryOperationFinished( Notification source, Operation operation, List<? extends Serializable> entries ) {

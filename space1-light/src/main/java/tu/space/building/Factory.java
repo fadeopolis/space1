@@ -5,7 +5,6 @@ import java.net.URI;
 import java.util.List;
 
 import org.mozartspaces.core.Capi;
-import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.MzsCore;
 import org.mozartspaces.core.MzsCoreException;
@@ -35,8 +34,6 @@ public class Factory implements NotificationListener{
 	private final Logger log = Logger.make(getClass());
 	
 	private final Capi capi;
-	private ContainerReference crefOrder;
-	
 	public String factorySpace = "xvsm://localhost:";
 	
 	/**
@@ -59,7 +56,7 @@ public class Factory implements NotificationListener{
 		capi = new Capi(core);
 		
 		try {
-			crefOrder = ContainerCreator.getOrderContainer(URI.create(factorySpace), capi);
+			ContainerCreator.getOrderContainer(URI.create(factorySpace), capi);
 		} catch (MzsCoreException e) {
 			log.error("Lookup of order container failed");
 		}

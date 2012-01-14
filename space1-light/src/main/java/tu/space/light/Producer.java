@@ -2,28 +2,23 @@ package tu.space.light;
 
 import java.util.Random;
 
-import static tu.space.util.ContainerCreator.labelForCpuType;
-
 import org.mozartspaces.core.Capi;
-import org.mozartspaces.core.ContainerReference;
-import org.mozartspaces.core.Entry;
-import org.mozartspaces.core.MzsConstants.RequestTimeout;
 import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.core.TransactionReference;
 
 import tu.space.components.Component;
-import tu.space.components.Cpu;
+import tu.space.util.ProductManager;
 import tu.space.utils.UUIDGenerator;
 
 public class Producer<C extends Component> extends Worker {
 	public Producer( String name, Capi capi, int port, int quantity, double errorRate, 
-			Component.Factory<C> f, ContainerReference cref) {
+			Component.Factory<C> f, ProductManager<C> p ) {
 		super( name, capi, port );
 		
 		this.quantity  = quantity;
 		this.errorRate = errorRate;
 		this.factory   = f;
-		this.cref      = cref;
+		this.manager   = p;
 	}
 	
 	@Override
@@ -46,7 +41,7 @@ public class Producer<C extends Component> extends Worker {
 			boolean   faulty    = rand.nextDouble() < errorRate; // bernoulli experiment
 			String    productId = uuids.generate();
 			
-			Component c = factory.make( productId, workerId, faulty );
+			C c = factory.make( productId, workerId, faulty );
 			
 			assert c.id         == productId;
 			assert c.producerId == workerId;
@@ -60,27 +55,16 @@ public class Producer<C extends Component> extends Worker {
 		clean();
 	}
 
-	public void publish( Component c ) {
+	public void publish( C c ) {
 		TransactionReference tx = null;
 		try {
-			tx = capi.createTransaction(5000, space);
+			tx = beginTransaction();
 
-			//write an entry to the container using the default timeout and the transaction
 			log.info("Worker: %s, produziere %s, Error: %s", workerId, c.id.toString(), c.hasDefect);
 			
-			//labeldata for cpu-type
-			Entry entry = null;
-			if(c instanceof Cpu){
-					entry = new Entry( c,  labelForCpuType(((Cpu) c).type));					
-			} else {
-				//every component but not a cpu
-				entry = new Entry( c );
-			}
+			manager.write( tx, c );
 			
-			capi.write( cref, RequestTimeout.DEFAULT, tx, entry );
-			
-			//commit the transaction
-			capi.commitTransaction(tx);
+			commit( tx );
 		} catch ( MzsCoreException e ) {
 			if ( tx != null ) rollback( tx );
 			
@@ -95,5 +79,5 @@ public class Producer<C extends Component> extends Worker {
 	private final int    quantity;
 	private final double errorRate;
 	private final Component.Factory<C> factory;
-	private final ContainerReference   cref;
+	private final ProductManager<C>    manager;
 }

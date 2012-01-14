@@ -40,8 +40,8 @@ public final class Computer extends Product {
 	}
 
 	private Computer( 
-			String id, String manufacturerId, String defectTesterId, String completenessTesterId, String logisticianId,
-			String orderId, Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram,
+			String id, String manufacturerId, String orderId, String defectTesterId, String completenessTesterId, String logisticianId,
+			Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram,
 			TestStatus defect, TestStatus complete, boolean finished
 	) {
 		this.manufacturerId       = manufacturerId;
@@ -68,7 +68,7 @@ public final class Computer extends Product {
 		assert status != TestStatus.UNTESTED;
 		
 		return new Computer(
-			id, manufacturerId, testerId, completenessTesterId, logisticianId, null,
+			id, manufacturerId, testerId, completenessTesterId, logisticianId, orderId,
 			cpu, gpu, mainboard, ramModules,
 			status, complete, false
 		);
@@ -78,7 +78,7 @@ public final class Computer extends Product {
 		assert status   != TestStatus.UNTESTED;
 		
 		return new Computer(
-			id, manufacturerId, defectTesterId, testerId, logisticianId, null,
+			id, manufacturerId, defectTesterId, testerId, logisticianId, orderId,
 			cpu, gpu, mainboard, ramModules,
 			defect, status, false
 		);

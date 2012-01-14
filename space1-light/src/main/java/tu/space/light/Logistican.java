@@ -1,30 +1,33 @@
 package tu.space.light;
 
-import static tu.space.util.ContainerCreator.DEFAULT_TX_TIMEOUT;
 import static tu.space.util.ContainerCreator.SELECTOR_TESTED_FOR_COMPlETENESS;
 import static tu.space.util.ContainerCreator.SELECTOR_TESTED_FOR_DEFECT;
-import static tu.space.util.ContainerCreator.fifo;
+import static tu.space.util.ContainerCreator.selector;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.mozartspaces.capi3.CoordinationData;
 import org.mozartspaces.capi3.CountNotMetException;
+import org.mozartspaces.capi3.LabelCoordinator.LabelSelector;
 import org.mozartspaces.core.Capi;
-import org.mozartspaces.core.ContainerReference;
-import org.mozartspaces.core.Entry;
-import org.mozartspaces.core.MzsConstants;
-import org.mozartspaces.core.MzsConstants.RequestTimeout;
+import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.core.TransactionReference;
 import org.mozartspaces.notifications.Operation;
 
 import tu.space.components.Computer;
 import tu.space.components.Computer.TestStatus;
-import tu.space.util.ContainerCreator;
+import tu.space.util.ComputerManager;
+import tu.space.util.CpuManager;
+import tu.space.util.GpuManager;
 import tu.space.util.LogBack;
+import tu.space.util.MainboardManager;
+import tu.space.util.OrderManager;
+import tu.space.util.RamManager;
+import tu.space.util.StorageManager;
+import tu.space.util.TrashManager;
 import tu.space.utils.Logger;
-import tu.space.utils.SpaceException;
 
 public class Logistican extends Processor<Computer> {
 	
@@ -32,61 +35,57 @@ public class Logistican extends Processor<Computer> {
 		Logger.configure();
 		LogBack.configure();
 
-		new Logistican(args).run();
-	}
-
-	public Logistican(String... args) throws MzsCoreException {
-		super(args);
-
-		pcs = ContainerCreator.getPcContainer(         this.space, capi );
-		trash = ContainerCreator.getPcDefectContainer( this.space, capi );
-		storage = ContainerCreator.getStorageContainer(this.space, capi );	
-		order = ContainerCreator.getOrderContainer(    this.space, capi );
+		if ( args.length != 2 ) {
+			System.err.println("usage: Logistician NAME PORT" );
+			System.exit( 1 );
+		} else {
+			try{
+				Integer.parseInt(args[1]);
+			} catch (NumberFormatException e){
+				System.err.println("usage: Logistician NAME PORT, Port is not a number");
+			}
+		}
+		
+		String workerId = args[0];
+		Capi   capi     = new Capi( DefaultMzsCore.newInstance( 0 ) );
+		int    space    = Integer.parseInt( args[1] );
+		
+		new Logistican( workerId, capi, space ).run();
 	}
 
 	public Logistican(String id, Capi capi, int space) throws MzsCoreException {
 		super(id, capi, space);
 
-		pcs = ContainerCreator.getPcContainer(         this.space, capi );
-		trash = ContainerCreator.getPcDefectContainer( this.space, capi );
-		storage = ContainerCreator.getStorageContainer(this.space, capi );
-		order = ContainerCreator.getOrderContainer(    this.space, capi );
+		pcs  = new ComputerManager( this.space, capi );
+		cpus = new CpuManager( this.space, capi );
+		gpus = new GpuManager( this.space, capi );
+		mbds = new MainboardManager( this.space, capi );
+		rams = new RamManager( this.space, capi );
+		orders  = new OrderManager( this.space, capi );
+		trash   = new TrashManager( this.space, capi );
+		storage = new StorageManager( this.space, capi );
 	}
 
-	public void storePc( TransactionReference tx ) throws MzsCoreException {
-		Computer pc = (Computer) capi.take( 
-				pcs,
-				Arrays.asList( SELECTOR_TESTED_FOR_DEFECT, SELECTOR_TESTED_FOR_COMPlETENESS ), 
-				RequestTimeout.TRY_ONCE, 
-				tx ).get( 0 );
+	public void storePc( Computer c, TransactionReference tx ) throws MzsCoreException {
+		List<LabelSelector> cd = new ArrayList<LabelSelector>();
+		cd.add( SELECTOR_TESTED_FOR_DEFECT );
+		cd.add( SELECTOR_TESTED_FOR_COMPlETENESS );
+		if ( c.orderId != null ) { cd.add( selector(c.orderId) ); }
+		
+		Computer pc = pcs.takeOne( tx, cd );
 
 		pc = pc.tagAsFinished( workerId );
 
 		if ( !pc.isComplete() || pc.hasDefect() ) {
 			log.info( "%s: Got an bad PC %s", this, pc.id );
 			
-			capi.write( trash, new Entry( pc ) );
+			trash.write( tx, pc );
 		} else {
 			log.info( "%s: Got a mighty fine PC %s", this, pc.id );
 						
-			//check if the pc meets the spec.
-			if(contract != null && contract.equals(pc)){
-				try{
-					log.info("Pc here add %s", pc);
-					
-					contract.setComputerId(pc.id);
-					
-					log.info("The order state is: %s", contract);
-				} catch (SpaceException ex){
-					//quantity reached 
-					contract = contract.markFinished();
-					//take order from space 
-					log.info("Order complete delete it form space!");
-					capi.delete(order, fifo(1), MzsConstants.Selecting.DEFAULT_COUNT, tx);
-				}
-			}
+			if ( pc.orderId != null ) orders.signalPcIsFinished( tx, pc );
 			
-			capi.write( storage, new Entry( pc ) );
+			storage.write( tx, pc );
 		}
 	}
 
@@ -95,23 +94,28 @@ public class Logistican extends Processor<Computer> {
 		TransactionReference tx = null; 
 		try {
 			while ( true ) {
-				tx = capi.createTransaction( DEFAULT_TX_TIMEOUT, space );
+				tx = beginTransaction();
 				
-				storePc( tx );
+				List<LabelSelector> cd = new ArrayList<LabelSelector>();
+				cd.add( SELECTOR_TESTED_FOR_DEFECT );
+				cd.add( SELECTOR_TESTED_FOR_COMPlETENESS );
+
+				Computer pc = pcs.takeOne( tx, cd );
 				
-				capi.commitTransaction( tx );
+				storePc( pc, tx );
+				
+				commit( tx );
 			}
 		} catch ( CountNotMetException e ) {
 			rollback( tx );
 		}
 		
 		registerNotification( pcs, Operation.WRITE );
-		registerNotification( order, Operation.WRITE );
 	}
 	@Override
 	protected boolean process( Computer pc, Operation o, List<CoordinationData> cds, TransactionReference tx ) throws MzsCoreException {
 		try {
-			storePc( tx );
+			storePc( pc, tx );
 			return true;			
 		} catch ( CountNotMetException e ) {
 			rollback( tx );
@@ -124,8 +128,12 @@ public class Logistican extends Processor<Computer> {
 		return e.complete != TestStatus.UNTESTED && e.defect != TestStatus.UNTESTED;
 	}
 
-	private final ContainerReference pcs;
-	private final ContainerReference trash;
-	private final ContainerReference storage;
-	private final ContainerReference order;
+	protected final ComputerManager  pcs;
+	protected final CpuManager       cpus;
+	protected final GpuManager       gpus;
+	protected final MainboardManager mbds;
+	protected final RamManager       rams;
+	protected final OrderManager     orders;
+	protected final TrashManager     trash;
+	protected final StorageManager   storage;
 }

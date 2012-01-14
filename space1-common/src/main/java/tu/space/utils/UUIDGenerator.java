@@ -1,12 +1,10 @@
 package tu.space.utils;
 
-import com.fasterxml.uuid.Generators;
-import com.fasterxml.uuid.impl.TimeBasedGenerator;
-
 public final class UUIDGenerator {
 	public String generate() {
-		return _gen.generate().toString();
+		return Integer.toHexString( (int) System.nanoTime() );
+//		return _gen.generate().toString();
 	}
 	
-	private final TimeBasedGenerator _gen = Generators.timeBasedGenerator();
+//	private final TimeBasedGenerator _gen = Generators.timeBasedGenerator();
 }

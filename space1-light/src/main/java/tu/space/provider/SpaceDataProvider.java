@@ -6,7 +6,7 @@ import java.awt.event.WindowListener;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.net.URI;
-import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
 
@@ -17,7 +17,6 @@ import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
 import org.mozartspaces.core.DefaultMzsCore;
 import org.mozartspaces.core.Entry;
-import org.mozartspaces.core.MzsConstants;
 import org.mozartspaces.core.MzsCore;
 import org.mozartspaces.core.MzsCoreException;
 import org.mozartspaces.notifications.Notification;
@@ -28,6 +27,7 @@ import org.mozartspaces.notifications.Operation;
 import tu.space.components.Component;
 import tu.space.components.Computer;
 import tu.space.components.Cpu;
+import tu.space.components.Product;
 import tu.space.components.Cpu.Type;
 import tu.space.components.Gpu;
 import tu.space.components.Mainboard;
@@ -35,6 +35,12 @@ import tu.space.components.RamModule;
 import tu.space.contracts.Order;
 import tu.space.gui.DataProvider;
 import tu.space.util.ContainerCreator;
+import tu.space.util.CpuManager;
+import tu.space.util.GpuManager;
+import tu.space.util.MainboardManager;
+import tu.space.util.ProductManager;
+import tu.space.util.RamManager;
+import tu.space.utils.UUIDGenerator;
 
 import tu.space.light.Producer;
 
@@ -45,13 +51,10 @@ public class SpaceDataProvider implements DataProvider {
 	private final Capi    capi  = new Capi(core);
 	private final URI     space;	
 	
-	private final String factoryId;
-	
 	/**
 	 * Constructor for bsp1 default on port 9877
 	 */
 	public SpaceDataProvider() {
-		this.factoryId = "NoID";
 		this.port = 9877;
 		space = URI.create("xvsm://localhost:" + port);
 	}
@@ -63,7 +66,6 @@ public class SpaceDataProvider implements DataProvider {
 	 * @param factorySpace
 	 */
 	public SpaceDataProvider(final String factoryId, final int port, final String factorySpace){
-		this.factoryId = factoryId;
 		this.port = port;
 		space = URI.create(factorySpace);
 	}
@@ -105,7 +107,7 @@ public class SpaceDataProvider implements DataProvider {
 
 	@Override
 	public TableModel trash() throws Exception {
-		ContainerReference cref = ContainerCreator.getPcDefectContainer( space, capi );	
+		ContainerReference cref = ContainerCreator.getTrashContainer( space, capi );	
 		return new SpaceTableModel(Computer.class, core, cref );
 	}
 
@@ -130,8 +132,12 @@ public class SpaceDataProvider implements DataProvider {
 	@Override
 	public void placeOrder(Type cpuType, int ramAmount, boolean gpu, int quanitity) {
 		try {
-			ContainerReference cref = ContainerCreator.getOrderContainer(space, capi);
-			capi.write(cref, new Entry(new Order(cpuType, ramAmount, gpu, quanitity)));
+			String uuid = uuids.generate();
+			
+			ContainerCreator.getOrders( space, capi ).publishOrder( 
+				new Order( uuid, cpuType, ramAmount, gpu, quanitity ),
+				null
+			);
 		} catch (MzsCoreException e) {
 			e.printStackTrace();
 		}
@@ -141,20 +147,20 @@ public class SpaceDataProvider implements DataProvider {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public void startProducer( String id, Class<? extends Component> type, int quota, double errorRate ) {
 		try {
-			ContainerReference cref = null;
+			ProductManager p = null;
 			if ( type == Cpu.class ) {
-				cref = ContainerCreator.getCpuContainer( space, capi );
+				p = new CpuManager( space, capi );
 			} else if ( type == Gpu.class ) {
-				cref = ContainerCreator.getGpuContainer( space, capi );
+				p = new GpuManager( space, capi );
 			} else if ( type == Mainboard.class ) {
-				cref = ContainerCreator.getMainboardContainer( space, capi );
+				p = new MainboardManager( space, capi );
 			} else if ( type == RamModule.class ) {
-				cref = ContainerCreator.getRamContainer( space, capi );
+				p = new RamManager( space, capi );
 			}
 			
 			new Thread(
-				new Producer( id, capi, port, quota, errorRate, 
-						Component.makeFactory( type ), cref ) ).start();
+				new Producer( id, capi, port, quota, errorRate, Component.makeFactory( type ), p ) 
+			).start();
 		} catch ( Exception e ) {
 			e.printStackTrace();
 		}
@@ -196,12 +202,27 @@ public class SpaceDataProvider implements DataProvider {
 					
 						if ( comp instanceof Entry ) comp = ((Entry) comp).getValue(); 
 						
+						if ( comp instanceof Order ) {
+							synchronized ( data ) {
+								Iterator<Object> it = data.iterator();
+								while ( it.hasNext() ) {
+									Object o = it.next();
+									if ( o instanceof Order ) {
+										Order o1 = (Order) comp;
+										Order o2 = (Order) o;
+										
+										if ( o1.id.equals( o2.id ) ) it.remove();
+									}
+								}
+							}
+						}
+						
 						data.remove( comp );
 						SpaceTableModel.this.fireTableRowsDeleted( 0, getRowCount() );
 					}
 				}
 			}
-			, Operation.TAKE
+			, Operation.TAKE, Operation.DELETE
 			);
 		}
 		
@@ -223,6 +244,7 @@ public class SpaceDataProvider implements DataProvider {
 			return fields.length + 1;
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		public Object getValueAt( int rowIndex, int columnIndex ) {
 			try {
@@ -232,7 +254,23 @@ public class SpaceDataProvider implements DataProvider {
 				if ( rowIndex    < 0 || rowIndex    >= data.size()   ) return null;
 				if ( columnIndex < 0 || columnIndex >= fields.length ) return null;
 				
-				return fields[columnIndex].get( data.get( rowIndex ) );
+				Object o = fields[columnIndex].get( data.get( rowIndex ) );
+				
+				if ( o == null ) return o;
+				
+				if ( o instanceof Product ) 
+					return ((Product) o).bareToString();
+				else if ( o instanceof List ) {
+					@SuppressWarnings("rawtypes")
+					List<Product> l = (List) o;
+					if ( l.isEmpty() ) return l;
+					if ( !(l.get( 0 ) instanceof Product) ) return l;
+
+					String str = "";
+					for ( Product p : l ) str += p.bareToString() + "; ";
+					return str;
+				} else
+					return o;
 			} catch ( IllegalArgumentException e ) {
 				return "ERROR: " + e;
 			} catch ( IllegalAccessException e ) {
@@ -240,7 +278,9 @@ public class SpaceDataProvider implements DataProvider {
 			}
 		}
 		
-		private final Field[]        fields;
-		private final Vector<Object> data;
+		private final Field[]      fields;
+		private final List<Object> data;
 	}
+
+	private final UUIDGenerator uuids = new UUIDGenerator();
 }

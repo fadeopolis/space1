@@ -1,13 +1,8 @@
 package tu.space.contracts;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-
 import tu.space.components.Computer;
 import tu.space.components.Cpu.Type;
-import tu.space.utils.SpaceException;
-import tu.space.utils.UUIDGenerator;
+import tu.space.components.Product;
 
 /**
  * A order which is carried out by a factory
@@ -16,142 +11,54 @@ import tu.space.utils.UUIDGenerator;
  *
  */
 @SuppressWarnings("serial")
-public class Order implements Serializable{
+public class Order extends Product {
 	
-	public final String  orderId;
+	public final String  id;
 	public final Type    cpuType;
 	public final int 	 ramQuantity;
 	public final boolean gpu;
 	
-	public final List<String> computerIds = new ArrayList<String>();
+	public final int quantity;
+	public final int produced;
+	public final int finished;
 	
-	public final int 	 quantitiy;
-	private int 		 produced;
-	private int 		 ready;
-	
-	public final boolean finished;
-	
-	private boolean flag = false;
-	
-	public Order(final Type type, final int ramQuantity, final boolean gpu, final int quantity){
-		UUIDGenerator uuidgen = new UUIDGenerator();
-		this.orderId = uuidgen.generate();
-		
-		this.cpuType 	 = type;
-		this.ramQuantity = ramQuantity;
-		this.gpu   	     = gpu;
-		this.quantitiy   = quantity;
-		this.finished	 = false;
+	public Order( String id,  Type type,  int ramQuantity,  boolean gpu,  int quantity ){
+		this( id, type, ramQuantity, gpu, quantity, 0, 0 );
 	}
 	
-	private Order(final String orderId, final Type cpuType, final int ramQuantity, final boolean gpu, final int quantity, final boolean finished, final List<String> computerIds, final boolean flag) {
-		this.orderId	 = orderId;
+	private Order( String id,  Type cpuType,  int ramQuantity,  boolean gpu,  int quantity, int produced, int finished ) {
+		this.id	         = id;
 		this.cpuType 	 = cpuType;
 		this.ramQuantity = ramQuantity;
 		this.gpu   	     = gpu;
-		this.quantitiy   = quantity;
-		this.finished	 = true;
-		this.computerIds.addAll(computerIds);
-		this.flag = flag;
+		this.quantity   = quantity;
+
+		this.produced    = produced;
+		this.finished	 = finished;
 	}
 
-	/**
-	 * Add a computer to the order, and mark finish if 
-	 * the size of pc's equals the quantity.
-	 * 
-	 * @param uuid
-	 * @throws SpaceException
-	 * 		quantity reached mark finished
-	 */
-	public synchronized void setComputerId(final String uuid) {
-		if(flag) throw new SpaceException("Max quanitiy reached");
-		computerIds.add(uuid);
-		
-		//mark finished
-		if( (computerIds.size() - quantitiy) == 0 ){
-			throw new SpaceException("Ready to finish order");
-		}
+	public Order incProduced(){
+		return new Order( id, cpuType, ramQuantity, gpu, quantity, produced + 1, finished );
 	}
 	
-	/**
-	 * Increment produced pc's for order
-	 * 
-	 * @return int
-	 */
-	public int incProduced(){
-		return produced++;
+	public Order decProduced(){
+		return new Order( id, cpuType, ramQuantity, gpu, quantity, produced - 1, finished );
 	}
 	
-	/**
-	 * Decrement produced pc's for order, if a pc was defect
-	 * 
-	 * @return int
-	 */
-	public int decProduced(){
-		return produced--;
-	}
-	
-	/**
-	 * Finished pc's without errors
-	 * 
-	 * @return int
-	 */
-	public int incReady(){
-		return ready++;
-	}
-	
-	public List<String> getComputerId(){
-		return computerIds;
+	public Order incFinished(){
+		return new Order( id, cpuType, ramQuantity, gpu, quantity, produced, finished + 1 );
 	}
 
-	/**
-	 * @return the orderId
-	 */
-	public String getOrderId() {
-		return orderId;
+	public Order decFinished(){
+		return new Order( id, cpuType, ramQuantity, gpu, quantity, produced, finished - 1 );
 	}
 
-	/**
-	 * @return the finished
-	 */
 	public boolean isFinished() {
-		return finished;
+		return quantity - finished == 0;
 	}
 
-	/**
-	 * @param finished the finished to set
-	 */
-	public Order markFinished() {
-		flag = true;
-		return new Order(orderId, cpuType, ramQuantity, gpu, quantitiy, true, computerIds, flag);
-	}
-	
-	/**
-	 * @return the type
-	 */
-	public Type getType() {
-		return cpuType;
-	}
-
-	/**
-	 * @return the ramQuantity
-	 */
-	public int getRamQuantity() {
-		return ramQuantity;
-	}
-
-	/**
-	 * @return the gpu
-	 */
-	public boolean isGpu() {
-		return gpu;
-	}
-
-	/**
-	 * @return the quantitiy
-	 */
-	public int getQuantitiy() {
-		return quantitiy;
+	public boolean shouldBuildMore() {
+		return quantity - produced > 0;
 	}
 	
 	/**
@@ -168,14 +75,14 @@ public class Order implements Serializable{
 		return true;
 	}
 
-	/* (non-Javadoc)
-	 * @see java.lang.Object#toString()
-	 */
 	@Override
-	public String toString() {
-		return "Order [orderId=" + orderId + ", cpuType=" + cpuType
-				+ ", ramQuantity=" + ramQuantity + ", gpu=" + gpu
-				+ ", computerIds=" + computerIds + ", quantitiy=" + quantitiy
-				+ ", finished=" + finished + ", flag=" + flag + "]";
+	public String bareToString() {
+		return "id="          + id
+		   + ", cpuType="     + cpuType
+		   + ", ramQuantity=" + ramQuantity
+		   + ", gpu="         + gpu
+		   + ", quantitiy="   + quantity
+		   + ", produced="    + produced
+		   + ", finished="    + finished;
 	}
 }
