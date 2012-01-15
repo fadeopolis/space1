@@ -1,9 +1,6 @@
 package tu.space.components;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -12,26 +9,28 @@ public final class Computer extends Product {
 		YES, NO, UNTESTED;
 	}
 	
-	public final String id;
 	public final String manufacturerId;
 	public final String defectTesterId;
 	public final String completenessTesterId;
 	public final String logisticianId;
 	public final String orderId;
 	
-	public final Cpu             cpu;
-	public final Gpu             gpu;
-	public final Mainboard       mainboard;
-	public final List<RamModule> ramModules;
+	public final Cpu       cpu;
+	public final Gpu       gpu;
+	public final Mainboard mainboard;
+	public final RamList   ram;
 
 	public final TestStatus      defect;
 	public final TestStatus      complete;
 	public final boolean         finished;
 	
-	public Computer( String id, String manufacturerId, String orderId, Cpu cpu, Gpu gpu, Mainboard mainboard, RamModule... ram ) {
-		this( id, manufacturerId, orderId, cpu, gpu, mainboard, Arrays.asList( ram ) );
+	public Computer( String id, String manufacturerId, String orderId ) {
+		this( id, manufacturerId, orderId, null, null, null, (RamList) null );
 	}
-	public Computer( String id, String manufacturerId, String orderId, Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram ) {
+	public Computer( String id, String manufacturerId, String orderId, Cpu cpu, Gpu gpu, Mainboard mainboard, RamModule... ram ) {
+		this( id, manufacturerId, orderId, cpu, gpu, mainboard, new RamList( ram ) );
+	}
+	public Computer( String id, String manufacturerId, String orderId, Cpu cpu, Gpu gpu, Mainboard mainboard, RamList ram ) {
 		this( 
 			id, manufacturerId, orderId, null, null, null,
 			cpu, gpu, mainboard, ram, 
@@ -41,20 +40,20 @@ public final class Computer extends Product {
 
 	private Computer( 
 			String id, String manufacturerId, String orderId, String defectTesterId, String completenessTesterId, String logisticianId,
-			Cpu cpu, Gpu gpu, Mainboard mainboard, Collection<RamModule> ram,
+			Cpu cpu, Gpu gpu, Mainboard mainboard, RamList ram,
 			TestStatus defect, TestStatus complete, boolean finished
 	) {
+		super( id );
 		this.manufacturerId       = manufacturerId;
 		this.defectTesterId       = defectTesterId;
 		this.completenessTesterId = completenessTesterId;
 		this.logisticianId        = logisticianId;
 		this.orderId 			  = orderId;
 
-		this.id         = id;
-		this.cpu        = cpu;
-		this.gpu        = gpu;
-		this.mainboard  = mainboard;
-		this.ramModules = Collections.unmodifiableList( new ArrayList<RamModule>( ram ) );
+		this.cpu       = cpu;
+		this.gpu       = gpu;
+		this.mainboard = mainboard;
+		this.ram       = ram;
 		
 		this.complete = complete;
 		this.defect   = defect;
@@ -68,8 +67,8 @@ public final class Computer extends Product {
 		assert status != TestStatus.UNTESTED;
 		
 		return new Computer(
-			id, manufacturerId, testerId, completenessTesterId, logisticianId, orderId,
-			cpu, gpu, mainboard, ramModules,
+			id, manufacturerId, orderId, testerId, completenessTesterId, logisticianId,
+			cpu, gpu, mainboard, ram,
 			status, complete, false
 		);
 	}
@@ -78,15 +77,15 @@ public final class Computer extends Product {
 		assert status   != TestStatus.UNTESTED;
 		
 		return new Computer(
-			id, manufacturerId, defectTesterId, testerId, logisticianId, orderId,
-			cpu, gpu, mainboard, ramModules,
+			id, manufacturerId, orderId, defectTesterId, testerId, logisticianId, 
+			cpu, gpu, mainboard, ram,
 			defect, status, false
 		);
 	}
 	public Computer tagAsFinished( String logisticianId ) {
 		return new Computer(
-				id, manufacturerId, defectTesterId, completenessTesterId, logisticianId, orderId,
-				cpu, gpu, mainboard, ramModules,
+				id, manufacturerId, orderId, defectTesterId, completenessTesterId, logisticianId,
+				cpu, gpu, mainboard, ram,
 				defect, complete, true
 		);
 	}
@@ -99,7 +98,7 @@ public final class Computer extends Product {
 		defect |= gpu       != null && gpu.hasDefect;
 		defect |= mainboard != null && mainboard.hasDefect;
 		
-		for ( RamModule r : ramModules )
+		for ( RamModule r : ram )
 			defect |= r != null && r.hasDefect;
 		
 		return defect;
@@ -110,10 +109,10 @@ public final class Computer extends Product {
 		complete &= cpu       != null;
 		complete &= mainboard != null;
 		
-		for ( RamModule r : ramModules )
+		for ( RamModule r : ram )
 			complete &= r != null;
 		
-		complete &= ramModules.size() == 1 || ramModules.size() == 2 || ramModules.size() == 4;
+		complete &= ram.size() == 1 || ram.size() == 2 || ram.size() == 4;
 		
 		return complete;
 	}
@@ -124,7 +123,7 @@ public final class Computer extends Product {
 		cs.add( cpu );
 		cs.add( gpu );
 		cs.add( mainboard );
-		cs.addAll( ramModules );
+		for ( RamModule ram : this.ram ) cs.add( ram );
 
 		return cs.iterator();
 	}
@@ -140,98 +139,10 @@ public final class Computer extends Product {
 		   + ", cpu=" + cpu
 		   + ", gpu=" + gpu
 		   + ", mainboard=" + mainboard
-		   + ", ramModules=" + ramModules
+		   + ", ramModules=" + ram
 		   + ", defect=" + defect
 		   + ", complete=" + complete
 		   + ", finished=" + finished;
 	}
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result
-				+ ((complete == null) ? 0 : complete.hashCode());
-		result = prime
-				* result
-				+ ((completenessTesterId == null) ? 0 : completenessTesterId
-						.hashCode());
-		result = prime * result + ((cpu == null) ? 0 : cpu.hashCode());
-		result = prime * result + ((defect == null) ? 0 : defect.hashCode());
-		result = prime * result
-				+ ((defectTesterId == null) ? 0 : defectTesterId.hashCode());
-		result = prime * result + (finished ? 1231 : 1237);
-		result = prime * result + ((gpu == null) ? 0 : gpu.hashCode());
-		result = prime * result + ((id == null) ? 0 : id.hashCode());
-		result = prime * result
-				+ ((logisticianId == null) ? 0 : logisticianId.hashCode());
-		result = prime * result
-				+ ((mainboard == null) ? 0 : mainboard.hashCode());
-		result = prime * result
-				+ ((manufacturerId == null) ? 0 : manufacturerId.hashCode());
-		result = prime * result
-				+ ((ramModules == null) ? 0 : ramModules.hashCode());
-		return result;
-	}
-	@Override
-	public boolean equals( Object obj ) {
-		if ( this == obj )
-			return true;
-		if ( obj == null )
-			return false;
-		if ( getClass() != obj.getClass() )
-			return false;
-		Computer other = (Computer) obj;
-		if ( complete != other.complete )
-			return false;
-		if ( completenessTesterId == null ) {
-			if ( other.completenessTesterId != null )
-				return false;
-		} else if ( !completenessTesterId.equals( other.completenessTesterId ) )
-			return false;
-		if ( cpu == null ) {
-			if ( other.cpu != null )
-				return false;
-		} else if ( !cpu.equals( other.cpu ) )
-			return false;
-		if ( defect != other.defect )
-			return false;
-		if ( defectTesterId == null ) {
-			if ( other.defectTesterId != null )
-				return false;
-		} else if ( !defectTesterId.equals( other.defectTesterId ) )
-			return false;
-		if ( finished != other.finished )
-			return false;
-		if ( gpu == null ) {
-			if ( other.gpu != null )
-				return false;
-		} else if ( !gpu.equals( other.gpu ) )
-			return false;
-		if ( id == null ) {
-			if ( other.id != null )
-				return false;
-		} else if ( !id.equals( other.id ) )
-			return false;
-		if ( logisticianId == null ) {
-			if ( other.logisticianId != null )
-				return false;
-		} else if ( !logisticianId.equals( other.logisticianId ) )
-			return false;
-		if ( mainboard == null ) {
-			if ( other.mainboard != null )
-				return false;
-		} else if ( !mainboard.equals( other.mainboard ) )
-			return false;
-		if ( manufacturerId == null ) {
-			if ( other.manufacturerId != null )
-				return false;
-		} else if ( !manufacturerId.equals( other.manufacturerId ) )
-			return false;
-		if ( ramModules == null ) {
-			if ( other.ramModules != null )
-				return false;
-		} else if ( !ramModules.equals( other.ramModules ) )
-			return false;
-		return true;
-	}
+
 }

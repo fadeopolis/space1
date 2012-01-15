@@ -66,7 +66,7 @@ public class DarkCompletenessTester {
 						if ( c.cpu      != null  && !c.cpu.hasDefect       )   cpu.send( c.cpu );
 						if ( c.gpu      != null  && !c.gpu.hasDefect       )   gpu.send( c.gpu );
 						if ( c.mainboard != null && !c.mainboard.hasDefect )   mbd.send( c.mainboard );
-						for ( RamModule r : c.ramModules ) if ( !r.hasDefect ) ram.send( r );
+						for ( RamModule r : c.ram ) if ( !r.hasDefect ) ram.send( r );
 					} else {
 						log.info("%s found PC %s to be complete", id, c.id );
 

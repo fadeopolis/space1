@@ -24,4 +24,6 @@ public class Cpu extends Component {
 	}
 	
 	public final Type type;
+	
+	@Override public Component.Type type() { return Component.Type.CPU; }
 }

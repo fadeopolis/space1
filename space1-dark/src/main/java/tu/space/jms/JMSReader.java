@@ -8,15 +8,33 @@ import javax.jms.ObjectMessage;
 import javax.jms.Session;
 
 import tu.space.components.Product;
+import tu.space.middleware.Input;
 import tu.space.utils.AbstractGeneric;
+import tu.space.utils.Logger;
 
-public class JMSReader<P extends Product> extends AbstractGeneric<P> {
-	JMSReader( Class<P> c, Session s, String name ) throws JMSException {
+public class JMSReader<P extends Product> extends AbstractGeneric<P> implements Input<P> {
+	public JMSReader( Class<P> c, Session s ) throws JMSException {
+		this( c, s, null );
+	}
+	public JMSReader( Class<P> c, Session s, String selector ) throws JMSException {
+		this( c, s, c.getSimpleName(), selector );
+	}
+	JMSReader( Class<P> c, Session s, String name, String selector ) throws JMSException {
 		super( c );
 		
 		session = s;
-		queue   = s.createConsumer( s.createQueue( name ) );
+		queue   = s.createConsumer( s.createQueue( name ), selector );
 		topic   = s.createProducer( s.createTopic( name ) );
+	}
+	
+	@Override
+	public P take() {
+		try {
+			return readNoWait();
+		} catch ( JMSException e ) {
+			log.warn( e.toString() );
+			return null;
+		}
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -46,4 +64,5 @@ public class JMSReader<P extends Product> extends AbstractGeneric<P> {
 	private Session         session;
 	private MessageConsumer queue;
 	private MessageProducer topic;
+	private final Logger    log = Logger.make( getClass() );
 }

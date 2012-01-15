@@ -13,7 +13,6 @@ import tu.space.components.Product;
 @SuppressWarnings("serial")
 public class Order extends Product {
 	
-	public final String  id;
 	public final Type    cpuType;
 	public final int 	 ramQuantity;
 	public final boolean gpu;
@@ -27,7 +26,7 @@ public class Order extends Product {
 	}
 	
 	private Order( String id,  Type cpuType,  int ramQuantity,  boolean gpu,  int quantity, int produced, int finished ) {
-		this.id	         = id;
+		super( id );
 		this.cpuType 	 = cpuType;
 		this.ramQuantity = ramQuantity;
 		this.gpu   	     = gpu;
@@ -61,6 +60,10 @@ public class Order extends Product {
 		return quantity - produced > 0;
 	}
 	
+	public PcSpec getSpec() {
+		return new PcSpec( id, cpuType, gpu, ramQuantity );
+	}
+	
 	/**
 	 * Check if pc is equals to the spec.
 	 * 
@@ -69,7 +72,7 @@ public class Order extends Product {
 	 */
 	public boolean equals(final Computer pc){
 		if(!(pc.cpu.type.equals(cpuType))) return false;
-		if(pc.ramModules.size() != ramQuantity) return false;
+		if(pc.ram.size() != ramQuantity) return false;
 		if( (gpu && (pc.gpu == null)) || (!gpu && (pc.gpu != null)) ) return false;
 		
 		return true;
@@ -85,4 +88,18 @@ public class Order extends Product {
 		   + ", produced="    + produced
 		   + ", finished="    + finished;
 	}
+
+	@Override
+	public boolean equals( Object obj ) {
+		if ( !(obj instanceof Order) ) return false;
+		
+		Order o = (Order) obj;
+		
+		return id.equals( o.id );
+	}
+	@Override
+	public int hashCode() {
+		return id.hashCode();
+	}
+	
 }
