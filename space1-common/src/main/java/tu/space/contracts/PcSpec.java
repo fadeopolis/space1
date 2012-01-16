@@ -12,12 +12,16 @@ public class PcSpec extends Product {
 	public final int      numRams;
 	
 	public PcSpec( String orderId, Type cpuType, boolean needGpu, int numRams ) {
+		this( orderId, cpuType, needGpu, numRams, false );
+	}
+	public PcSpec( String orderId, Type cpuType, boolean needGpu, int numRams, boolean init ) {
 		super( null );
 		
 		this.orderId = orderId;
 		this.cpuType = cpuType;
 		this.needGpu = needGpu;
 		this.numRams = numRams;
+		this.init    = init;
 	}
 	
 	@Override
@@ -26,4 +30,8 @@ public class PcSpec extends Product {
 		   + ", needGpu=" + needGpu
 		   + ", numRams=" + numRams;
 	}
+
+	public boolean init() { return init; }
+	
+	private final boolean init;
 }

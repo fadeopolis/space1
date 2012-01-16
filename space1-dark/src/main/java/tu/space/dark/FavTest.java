@@ -1,6 +1,7 @@
 package tu.space.dark;
 
 import java.util.Enumeration;
+import java.util.Scanner;
 
 import javax.jms.Connection;
 import javax.jms.JMSException;
@@ -26,11 +27,15 @@ public class FavTest {
 	public static void main( String[] args ) throws Exception {
 		Logger.configure();
 		
-		int port = 6666;
-		
+//		BrokerService bs = startBroker();
+//		
+//		waitForUserToPressEnter();
+//		
+//		bs.stop();
+//		
 //		doMiddlewareStuff();
 //		doJMSStuff();
-		printQueue( "Computer", null );
+		printQueue( "PcSpec", "orderId = '40fdae1f'" );
 	}
 	
 	static BrokerService startBroker() throws Exception {
@@ -83,11 +88,12 @@ public class FavTest {
 			Object        o = m.getObject();
 			
 			System.out.println( o.getClass().getSimpleName() + " " + o );
+			@SuppressWarnings("unchecked")
 			Enumeration<String> pns = m.getPropertyNames();
 			while ( pns.hasMoreElements() ) {
 				String prop = pns.nextElement();
 				
-				System.out.println( "\t" + prop + "\t\t: " + m.getObjectProperty( prop ) );
+				System.out.println( "\t'" + prop + "'\t\t: '" + m.getObjectProperty( prop ) + "'" );
 			}
 			i++;
 		}
@@ -97,5 +103,10 @@ public class FavTest {
 		c.close();
 		
 		System.out.println( "DONE, " + i + " elements" );
+	}
+
+	static void waitForUserToPressEnter() {
+		System.out.println( "PRESS ENTER TO CONTINUE" );
+		new Scanner( System.in ).hasNextLine();
 	}
 }

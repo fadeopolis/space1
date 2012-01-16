@@ -8,8 +8,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArrayList;
+
 import javax.jms.Connection;
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -37,6 +37,7 @@ import tu.space.middleware.Middleware;
 import tu.space.middleware.OrderItemListener;
 import tu.space.middleware.Output;
 import tu.space.middleware.RamInput;
+import tu.space.utils.Logger;
 import tu.space.utils.SpaceException;
 
 public class JMSMiddleware implements Middleware {
@@ -45,7 +46,6 @@ public class JMSMiddleware implements Middleware {
 		try {
 			connection = JMS.openConnection( port );
 			session    = JMS.createSession( connection );
-			queues     = new JMSQueues( session );
 			
 			orderOut  = JMS.getWriter( session, Order.class );
 			pcSpecOut = JMS.getWriter( session, PcSpec.class );
@@ -59,7 +59,7 @@ public class JMSMiddleware implements Middleware {
 			registerOrderListener( Operation.REMOVED, new Listener<Order>() {
 				@Override
 				public void onEvent( Order p ) {
-					orders.add( p );
+					orders.remove( p );
 				}
 			});
 			
@@ -93,17 +93,17 @@ public class JMSMiddleware implements Middleware {
 
 	@Override
 	public void registerOrderListener( Operation o, Listener<Order> l ) {
-		registerListener( queues.getTopicIn( Order.class, op2selector( o )  ), l );
+		registerListener( Order.class, op2selector( o ), l );
 	}
 
 	@Override
 	public void registerStorageListener( Operation o, Listener<Computer> l ) {
-		registerListener( queues.getStorageTopic( op2selector( o )  ), l );
+		registerListener( "Storage", op2selector( o ), l );
 	}
 
 	@Override
 	public void registerTrashListener( Operation o, Listener<Product> l ) {
-		registerListener( queues.getTrashTopic( op2selector( o )  ), l );
+		registerListener( "Trash", op2selector( o ), l );
 	}
 
 //	@Override
@@ -120,26 +120,26 @@ public class JMSMiddleware implements Middleware {
 	
 	@Override
 	public <P extends Product> void registerListener( Class<P> c, Operation o, Listener<P> l ) {
-		registerListener( queues.getTopicIn( c, op2selector( o ) ), l );
+		registerListener( c, op2selector( o ), l );
 	}
 
 	@Override
 	public void setOrderItemListener( final OrderItemListener l ) {
-		orderItemListener = l;
-		
-		orderItemConsumers[0] = registerListener( queues.getStorageTopic( CREATED_SELECTOR + " AND " + IS_IN_ORDER_SELECTOR ), new Listener<Computer>() {
+		registerListener( "Storage", CREATED_SELECTOR + " AND " + IS_IN_ORDER_SELECTOR, new Listener<Computer>() {
 			@Override
 			public void onEvent( Computer p ) {
 				l.onOrderItemFinished( p.orderId );
 			}
 		});
-		orderItemConsumers[1] = registerListener( queues.getTopicIn( PcSpec.class, CREATED_SELECTOR ), new Listener<PcSpec>() {
+		registerListener( PcSpec.class, CREATED_SELECTOR , new Listener<PcSpec>() {
 			@Override
 			public void onEvent( PcSpec p ) {
+				if ( p.init() ) return;
+				
 				l.onOrderItemDefect( p.orderId );
 			}			
 		});
-		orderItemConsumers[2] = registerListener( queues.getTopicIn( PcSpec.class, REMOVED_SELECTOR ), new Listener<PcSpec>() {
+		registerListener( PcSpec.class, REMOVED_SELECTOR , new Listener<PcSpec>() {
 			@Override
 			public void onEvent( PcSpec p ) {
 				l.onOrderItemProduced( p.orderId );
@@ -185,7 +185,7 @@ public class JMSMiddleware implements Middleware {
 						o = null;
 						
 						try {
-							return new JMSReader<PcSpec>( PcSpec.class, session, "orderId = " + out.id  );
+							return new JMSReader<PcSpec>( PcSpec.class, session, "orderId = '" + out.id + "'"  );
 						} catch ( JMSException e ) {
 							throw new SpaceException();
 						}
@@ -349,24 +349,15 @@ public class JMSMiddleware implements Middleware {
 	}
 
 	@Override
-	public void placeOrder( Type cpuType, int ramAmount, boolean gpu, int quanitity ) {
-		// disable OrderItemListener
-		try {
-			orderItemConsumers[0].close();
-			orderItemConsumers[1].close();
-			orderItemConsumers[2].close();
-		} catch ( JMSException e ) {
-			throw new SpaceException();
-		}
-		
+	public synchronized void placeOrder( Type cpuType, int ramAmount, boolean gpu, int quanitity ) {
 		// place order
 		Order o = new Order( genId(), cpuType, ramAmount, gpu, quanitity );
 		orderOut.write( o );
-		for ( int i = 0; i < quanitity; i++ ) pcSpecOut.write( o.getSpec() );
-		commitTransaction();
 		
-		// reenable OrderItemListener
-		setOrderItemListener( orderItemListener );
+		for ( int i = 0; i < quanitity; i++ ) {
+			pcSpecOut.write( new PcSpec( o.id, o.cpuType, o.gpu, o.ramQuantity, true ) );
+		}
+		commitTransaction();
 	}
 
 	@Override
@@ -380,50 +371,44 @@ public class JMSMiddleware implements Middleware {
 	}
 	
 	//***** PRIVATE
-		
-	private <P extends Product> MessageConsumer registerListener( final MessageConsumer consumer, final Listener<P> l ) {
-		new Thread() {
-			public void run() {
-				try {
-					while ( true ) {
-						Message m = consumer.receive();
-						
-						if ( m == null ) continue;
-						
-						// acknowledge recival of topic message
-						session.commit();
-						try {
-							sleep( 100 );
-						} catch ( InterruptedException e ) {
-						}
-						
-						@SuppressWarnings("unchecked")
-						P p = (P) ((ObjectMessage) m).getObject();
-						l.onEvent( p );
-					}
-				} catch ( JMSException e ) {
-					e.printStackTrace();
-				}					
-			}
-		}.start();
-		
-//			consumer.setMessageListener( new MessageListener() {
-//				@Override
-//				public void onMessage( Message message ) {
-//					try {
-//						@SuppressWarnings("unchecked")
-//						P p = (P) ((ObjectMessage) message).getObject();
-//						l.onEvent( p );
-//					} catch ( JMSException e ) {
-//						throw new SpaceException( e );
-//					}
-//				
-//				}
-//			});
-		
-		return consumer;
-	}
 
+	private <P extends Product> void registerListener( Class<P> c, String selector, final Listener<P> l ) {
+		registerListener( c.getSimpleName(), selector, l );
+	}
+	private <P extends Product> void registerListener( String topicName, String selector, final Listener<P> l ) {
+		try {
+			final Session         s  = JMS.createSession( connection );
+			final MessageConsumer mc = s.createConsumer( s.createTopic( topicName ), selector );
+			
+			new Thread() {
+				public void run() {
+					
+					while ( true ) {
+						try {
+							Message m = mc.receive();
+							
+							if ( m == null ) continue;
+							
+							// acknowledge recival of topic message
+							s.commit();
+							
+							try { sleep( 100 ); } catch ( InterruptedException e ) {}
+							
+							@SuppressWarnings("unchecked")
+							P p = (P) ((ObjectMessage) m).getObject();
+							l.onEvent( p );
+						} catch ( JMSException e ) {
+							log.error( e.toString() );
+							continue;
+						}					
+					}
+				}
+			}.start();
+		} catch ( JMSException e ) {
+			throw new SpaceException( e );
+		}
+	}
+	
 	private static String op2selector( Operation o ) {
 		switch ( o ) {
 			case CREATED: return CREATED_SELECTOR;
@@ -434,15 +419,10 @@ public class JMSMiddleware implements Middleware {
 	
 	private final Connection connection;
 	private final Session    session;
-	private final JMSQueues  queues;
-
 	private final JMSWriter<Order>  orderOut;
 	private final JMSWriter<PcSpec> pcSpecOut;
 	
-	private final List<Order>           orders                = new CopyOnWriteArrayList<Order>();
-	private final List<Listener<Order>> orderCreatedListeners = new Vector<Listener<Order>>();
-	private final List<Listener<Order>> orderRemovedListeners = new Vector<Listener<Order>>();
+	private final List<Order> orders = new CopyOnWriteArrayList<Order>();
 	
-	private OrderItemListener orderItemListener;
-	private MessageConsumer[] orderItemConsumers = new MessageConsumer[3];	
+	private final Logger log = Logger.make( getClass() );	
 }

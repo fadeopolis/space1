@@ -15,7 +15,7 @@ public class JMSWriter<P extends Product> extends AbstractGeneric<P> implements 
 	}
 	JMSWriter( Class<P> c, Session s, String name ) throws JMSException {
 		super( c );
-		
+
 		session = s;
 		queue   = s.createProducer( s.createQueue( name ) );
 		topic   = s.createProducer( s.createTopic( name ) );

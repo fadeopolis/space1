@@ -16,23 +16,23 @@ public class JMSGUI {
 
 		int port = Integer.parseInt( args[0] );
 		
-		System.out.println("STARTING DARK SERVER");
+		System.out.println("STARTING DARK SERVER ON PORT " + port );
 
 		Logger.configure();
 				
-		BrokerService broker = new BrokerService();
-		broker.setBrokerName( "dark-server" );
-		broker.addConnector( "tcp://localhost:" + port );
-		broker.setDeleteAllMessagesOnStartup( true );
-		
-		broker.start();
-		
+//		BrokerService broker = new BrokerService();
+//		broker.setBrokerName( "dark-server" );
+//		broker.addConnector( "tcp://localhost:" + port );
+//		broker.setDeleteAllMessagesOnStartup( true );
+//		
+//		broker.start();
+//		
 		new GUI( new JMSMiddleware( port ) );
 		
 		System.out.println("PRESS ENTER TO QUIT");
 		new Scanner( System.in ).hasNextLine();
 		
-		broker.stop();
+//		broker.stop();
 		
 		System.out.println("DARK SERVER FINISHED");
 	}

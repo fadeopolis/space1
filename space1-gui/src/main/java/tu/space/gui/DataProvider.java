@@ -21,4 +21,5 @@ public interface DataProvider {
 	
 	void startProducer( String id, Class<? extends Component> type, int quota, double errorRate );
 	void placeOrder( final Type cpuType, final int ramAmount, final boolean gpu, final int quanitity );
+
 }

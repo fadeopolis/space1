@@ -7,7 +7,6 @@ import javax.jms.Session;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 
-import tu.space.DarkServer;
 import tu.space.components.Computer;
 import tu.space.components.Computer.TestStatus;
 import tu.space.components.Cpu;
@@ -24,7 +23,7 @@ public abstract class JMS {
 	public static final String STR_TESTED_FOR_COMPLETENESS = "TESTED_FOR_COMPLETENESS";
 
 	public static Connection openConnection( int port ) throws JMSException {
-		return new ActiveMQConnectionFactory( DarkServer.BROKER_URL + port ).createConnection();
+		return new ActiveMQConnectionFactory( "tcp://localhost:" + port ).createConnection();
 	}
 	
 	public static Session createSession( Connection c ) throws JMSException {
