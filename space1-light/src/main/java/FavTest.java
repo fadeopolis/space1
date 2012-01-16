@@ -9,39 +9,22 @@ import org.mozartspaces.capi3.LabelCoordinator;
 import org.mozartspaces.capi3.Selector;
 import org.mozartspaces.core.Capi;
 import org.mozartspaces.core.ContainerReference;
-import org.mozartspaces.core.DefaultMzsCore;
-import org.mozartspaces.core.Entry;
 import org.mozartspaces.core.MzsConstants;
-import org.mozartspaces.core.MzsCore;
 import org.mozartspaces.core.MzsCoreException;
 
-import ch.qos.logback.classic.Level;
-
-import tu.space.components.Computer;
-import tu.space.components.Computer.TestStatus;
-import tu.space.components.Cpu;
-import tu.space.components.Gpu;
-import tu.space.components.Mainboard;
-import tu.space.components.RamList;
-import tu.space.components.RamModule;
 import tu.space.light.SpaceMiddleware;
-import tu.space.middleware.Listener;
-import tu.space.middleware.Middleware;
-import tu.space.middleware.Middleware.Operation;
 import tu.space.util.LogBack;
 import tu.space.worker.DefectTester;
-import tu.space.worker.Logistician;
-import tu.space.worker.Manufacturer;
 
 
 public class FavTest {
 	public static void main( String[] args ) throws MzsCoreException {
-		LogBack.configure( Level.WARN );
+		LogBack.configure();
 		
-		MzsCore core = DefaultMzsCore.newInstance( 0 );
-		Capi    capi = new Capi( core );
-		
-		ContainerReference cref = cref( capi );
+//		MzsCore core = DefaultMzsCore.newInstance( 0 );
+//		Capi    capi = new Capi( core );
+//		
+//		ContainerReference cref = cref( capi );
 		
 //		new Logistician( "log1", new SpaceMiddleware( 6666 ) );
 //		capi.write( 

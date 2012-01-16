@@ -50,7 +50,7 @@ public class JMSReader<P extends Product> extends AbstractGeneric<P> implements 
 	}
 
 	public P readNoWait() throws JMSException {
-		Message m = queue.receiveNoWait();
+		Message m = queue.receive( 100 );
 		if ( m == null ) return null;
 		
 		@SuppressWarnings("unchecked")

@@ -6,6 +6,9 @@ import org.apache.log4j.PatternLayout;
 
 public class Logger {
 	public static void configure() {
+		configure( Level.WARN );
+	}
+	public static void configure( Level level ) {
 		// configure log4j
 		org.apache.log4j.Logger root = org.apache.log4j.Logger.getRootLogger();
 	    root.addAppender( 
@@ -14,7 +17,7 @@ public class Logger {
 	    		ConsoleAppender.SYSTEM_ERR
 	    	)
 	    );
-	    root.setLevel( Level.INFO );
+	    root.setLevel( level );		
 	}
 
 	public static Logger make( Class<?> c ) {

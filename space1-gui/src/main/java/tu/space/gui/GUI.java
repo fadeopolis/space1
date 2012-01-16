@@ -60,9 +60,9 @@ public class GUI {
 		producers.setLayout( new GridLayout( 4, 5 ) );
 		
 		//Order area
-		final JComboBox<Cpu.Type> jcOrder    = new JComboBox<Cpu.Type>( Cpu.Type.values() );
-		final SpinnerModel        smPcAmount = new SpinnerNumberModel( 5, 0, Integer.MAX_VALUE, 1 );
-		final SpinnerModel        smRam      = new SpinnerNumberModel( 2, 1,                 4, 1 );
+		final JComboBox    jcOrder    = new JComboBox( Cpu.Type.values() );
+		final SpinnerModel smPcAmount = new SpinnerNumberModel( 5, 0, Integer.MAX_VALUE, 1 );
+		final SpinnerModel smRam      = new SpinnerNumberModel( 2, 1,                 4, 1 );
 		
 		//gpu
 		final JCheckBox cbGpu = new JCheckBox("Gpu");
@@ -82,9 +82,9 @@ public class GUI {
 		});
 		
 		//Producer area
-		final JComboBox<Component.Type> jc             = new JComboBox<Component.Type>( Component.Type.values() );
-		final SpinnerModel              quotaModel     = new SpinnerNumberModel( 5,   0, Integer.MAX_VALUE, 1    );
-		final SpinnerModel              errorRateModel = new SpinnerNumberModel( 0.5, 0,               1.0, 0.01 );
+		final JComboBox    jc             = new JComboBox( Component.Type.values() );
+		final SpinnerModel quotaModel     = new SpinnerNumberModel( 5,   0, Integer.MAX_VALUE, 1    );
+		final SpinnerModel errorRateModel = new SpinnerNumberModel( 0.5, 0,               1.0, 0.01 );
 
 		JButton jb = new JButton( "Start producer" );
 		jb.addActionListener( new ActionListener() {

@@ -25,7 +25,7 @@ public abstract class Worker {
 	// simulate work
 	protected void sleep() {
 		try {
-			Thread.sleep( MAX_SLEEP_TIME );
+			Thread.sleep( MIN_SLEEP_TIME + rand.nextInt( MAX_SLEEP_TIME - MIN_SLEEP_TIME ) );
 		} catch ( InterruptedException e ) {
 		}
 	}
@@ -40,5 +40,6 @@ public abstract class Worker {
 	private final UUIDGenerator uuid = new UUIDGenerator();
 	private final Random        rand = new Random();
 	
-	private static final int MAX_SLEEP_TIME = 0;
+	private static final int MIN_SLEEP_TIME = 1000;
+	private static final int MAX_SLEEP_TIME = 3000;
 }

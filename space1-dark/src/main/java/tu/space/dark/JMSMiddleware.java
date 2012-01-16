@@ -157,7 +157,7 @@ public class JMSMiddleware implements Middleware {
 	@Override
 	public void signalOrderIsDone( Order o ) {
 		try {
-			new JMSReader<>( Order.class, session, "orderId =" + o.id ).take();
+			new JMSReader<Order>( Order.class, session, "orderId =" + o.id ).take();
 		} catch ( JMSException e ) {
 			throw new SpaceException();
 		}

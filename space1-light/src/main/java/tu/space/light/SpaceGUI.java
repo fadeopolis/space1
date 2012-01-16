@@ -8,11 +8,10 @@ import tu.space.worker.CompletenessTester;
 import tu.space.worker.DefectTester;
 import tu.space.worker.Logistician;
 import tu.space.worker.Manufacturer;
-import ch.qos.logback.classic.Level;
 
 public class SpaceGUI {
 	public static void main( String... args ) throws Exception {
-		LogBack.configure( Level.WARN );
+		LogBack.configure();
 
 		DefaultMzsCore.newInstance( 6666 );
 		

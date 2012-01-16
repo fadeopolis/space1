@@ -384,9 +384,7 @@ public class SpaceMiddleware implements Middleware {
 				@SuppressWarnings("unchecked")
 				public void entryOperationFinished( Notification n, org.mozartspaces.notifications.Operation o, List<? extends Serializable> entries ) {
 					for ( Serializable s : entries ) {
-						Entry e = null;
 						if ( s instanceof Entry ) {
-							e = (Entry) s;
 							s = ((Entry) s).getValue();
 						}
 						
