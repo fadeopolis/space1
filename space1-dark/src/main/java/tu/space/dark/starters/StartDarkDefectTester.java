@@ -1,6 +1,6 @@
 package tu.space.dark.starters;
 
-import tu.space.worker.DefectTester;
+import tu.space.dark.worker.DefectTester;
 
 public class StartDarkDefectTester {
 	public static void main( String[] args ) throws Exception {

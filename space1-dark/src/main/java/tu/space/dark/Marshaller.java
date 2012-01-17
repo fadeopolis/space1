@@ -234,7 +234,8 @@ public abstract class Marshaller<P extends Product> {
 				m.getStringProperty( "orderId" ),
 				tu.space.components.Cpu.Type.valueOf( m.getStringProperty( "cpuType" ) ),
 				m.getBooleanProperty( "gpu" ),
-				m.getIntProperty( "nrRAM" )
+				m.getIntProperty( "nrRAM" ),
+				m.getBooleanProperty( "init" )
 			);
 		}
 
@@ -244,6 +245,7 @@ public abstract class Marshaller<P extends Product> {
 			m.setStringProperty( "cpuType", p.cpuType.name() );
 			m.setBooleanProperty( "gpu", p.needGpu );
 			m.setIntProperty( "nrRAM", p.numRams );
+			m.setBooleanProperty( "init", p.init() );
 		}
 	};	
 	

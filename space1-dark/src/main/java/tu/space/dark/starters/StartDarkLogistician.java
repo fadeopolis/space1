@@ -1,6 +1,6 @@
 package tu.space.dark.starters;
 
-import tu.space.worker.Logistician;
+import tu.space.dark.worker.Logistician;
 
 public class StartDarkLogistician {
 	public static void main( String[] args ) throws Exception {

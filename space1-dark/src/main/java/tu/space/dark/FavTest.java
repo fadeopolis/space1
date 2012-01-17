@@ -1,6 +1,7 @@
 package tu.space.dark;
 
 import java.util.Enumeration;
+import java.util.Random;
 import java.util.Scanner;
 
 import javax.jms.Connection;
@@ -21,8 +22,10 @@ import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.command.ActiveMQQueue;
 import tu.space.components.Cpu;
 import tu.space.components.Product;
+//import tu.space.dark.worker.Manufacturer;
+import tu.space.middleware.Listener;
+import tu.space.middleware.Middleware.Operation;
 import tu.space.utils.Logger;
-import tu.space.worker.Manufacturer;
 
 public class FavTest {
 	public static final int port = 6666;
@@ -32,14 +35,14 @@ public class FavTest {
 		
 //		BrokerService bs = startBroker();
 		
-//		doJMSStuff();
+		doJMSStuff();
 
 //		waitForUserToPressEnter();
 		
 //		bs.stop();
 //		
 //		doMiddlewareStuff();
-		printQueue( "PcSpec", "orderId='a1a58d4b'" );
+//		printQueue( "Component", "__TYPE__='Cpu'" );
 	}
 	
 	static BrokerService startBroker() throws Exception {
@@ -62,23 +65,72 @@ public class FavTest {
 	}
 	
 	static void doJMSStuff() throws Exception {
-		final Connection c = JMS.openConnection( "foo", port );
+//		new Thread("PRODUCER") {
+//			public void run() {
+//				try {
+//					Connection c = JMS.openConnection( "foo", port );
+//					final Session    s = JMS.createSession( c );
+//				
+//					final MessageProducer mp = s.createProducer( s.createQueue( "FOO" ) );
+//
+//					c.start();
+//				
+//					while ( true ) {
+//						Message m = s.createTextMessage("FOO");
+//					
+//						mp.send( m );
+//						s.commit();
+//					
+//						System.out.println("SENT " + m.getJMSMessageID() );
+//
+//						try { Thread.sleep( 2000 ); } catch ( InterruptedException e ) {}
+//					}
+//				} catch ( JMSException e ) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//			}
+//		}.start();
+//		
+//		new Thread("CONSUMER") {
+//			public void run() {
+//				try {
+//					final Connection c = JMS.openConnection( "bar", port );
+//					final Session    s = JMS.createSession( c );
+//
+//					final MessageConsumer mc = s.createConsumer( s.createQueue( "FOO" ) );
+//				
+//					c.start();
+//				
+//					Random r = new Random();
+//
+//					while ( true ) {
+//						Message m = mc.receive();
+//					
+//						if ( r.nextBoolean() ) {
+//							System.out.println( "ACCEPTED: " + m.getJMSMessageID() );
+//							s.commit();
+//						} else {
+//							System.out.println( "REJECTED: " + m.getJMSMessageID() );
+//							s.rollback();
+//						}
+//					}
+//				} catch ( JMSException e ) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//			}
+//		}.start();
+//		
+		Connection c = JMS.openConnection( "foo", port );
 		final Session    s = JMS.createSession( c );
-		
+	
+//		final MessageProducer mp = s.createProducer( s.createQueue( "FOO" ) );
+//		final MessageProducer mp = s.createProducer( s.createQueue( "BAR" ) );
+
+		final MessageConsumer mc = s.createConsumer( AdvisorySupport.getMessageDeliveredAdvisoryTopic( s.createQueue( "Component" ) ) );
 		c.start();
 
-		
-		final MessageProducer mp = s.createProducer( JMS.getQueue( s, Cpu.class ) );
-		final MessageConsumer mc = s.createConsumer( AdvisorySupport.getMessageDeliveredAdvisoryTopic( new ActiveMQQueue( "Cpu" ) ) );
-
-		Message m = s.createTextMessage( "foo" );
-//		Message m = s.createObjectMessage( new Cpu( "62465ce3", "", false, null ) );
-		m.setBooleanProperty( "REMOVED", true );
-		m.setStringProperty( "foo", null );
-		
-		mp.send( m );
-		s.commit();
-		
 		ActiveMQMessage msg = (ActiveMQMessage) mc.receive();
 		TextMessage     obj = (TextMessage) msg.getDataStructure();
 //		ObjectMessage   obj = (ObjectMessage) msg.getDataStructure();
@@ -92,7 +144,15 @@ public class FavTest {
 	}
 	
 	static void doMiddlewareStuff() {
-		new Manufacturer( "man1", new JMSMiddleware( "man1", port ) );
+		new JMSMiddleware( "bar", port ).registerListener( Cpu.class, Operation.CREATED, new Listener<Cpu>() {
+
+			@Override
+			public void onEvent( Cpu p ) {
+				// TODO Auto-generated method stub
+				System.out.println("foo");
+			}
+		} );
+//		new Manufacturer( "man1", new JMSMiddleware( "man1", port ) );
 	}
 	
 	static void printQueue( String name, String selector ) throws JMSException {		

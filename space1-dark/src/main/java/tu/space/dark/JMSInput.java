@@ -33,6 +33,19 @@ public class JMSInput<P extends Product> extends AbstractGeneric<P> implements I
 		}
 	}
 	
+	public P takeBlocking() {
+		try {
+			Message m = queue.receive();
+			
+			if ( m == null ) return null;
+			
+			return marshaller.fromMessage( m );
+		} catch ( JMSException e ) {
+			log.warn( e.toString() );
+			return null;
+		}
+	}
+	
 	private final MessageConsumer queue;
 	private final Marshaller<P>   marshaller;
 	private final Logger    log = Logger.make( getClass() );
