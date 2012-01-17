@@ -1,9 +1,9 @@
 package tu.space.worker;
 
 import tu.space.components.Computer;
-import tu.space.components.Computer.TestStatus;
 import tu.space.middleware.Input;
 import tu.space.middleware.Middleware;
+import tu.space.middleware.Middleware.Operation;
 
 public class DefectTester extends Tester {
 
@@ -16,11 +16,6 @@ public class DefectTester extends Tester {
 		return mw.getComputersUntestedForDefect();
 	}
 
-	@Override
-	protected boolean isUntested( Computer pc ) { 
-		return pc.defect == TestStatus.UNTESTED;
-	}
-
 	@Override 
 	protected boolean isOK( Computer c ) { 
 		return !c.hasDefect();
@@ -28,6 +23,11 @@ public class DefectTester extends Tester {
 
 	@Override
 	protected Computer tag( Computer c ) {
-		return c.tagAsTestedForDefect( id, c.hasDefect() ? TestStatus.YES : TestStatus.NO );
+		return c.tagAsTestedForDefect( id );
+	}
+
+	@Override
+	protected void registerListener() {
+		mw.registerListenerForComputersUntestedForDefect( Operation.CREATED, this );
 	}
 }

@@ -1,3 +1,0 @@
-#!/bin/bash
-
-./startWithMaven tu.space.DarkBrowser "$@"

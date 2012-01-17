@@ -16,7 +16,7 @@ import tu.space.middleware.Middleware.Operation;
 import tu.space.middleware.Output;
 import tu.space.middleware.RamInput;
 
-public final class Manufacturer extends Worker {
+public final class Manufacturer extends Processor<Component> {
 
 	public Manufacturer( String id, Middleware m ) {
 		super( id, m );
@@ -26,61 +26,58 @@ public final class Manufacturer extends Worker {
 		this.gpus = mw.getGpuInput();
 		this.mbds = mw.getMainboardInput();
 		this.rams = mw.getRamInput();
-		
-//		m.registerComponentListener( Operation.CREATED, new Listener<Component>() {
-//			@Override public void onEvent( Component p ) { onPartCreated( p ); }
-//		});
-		
-		m.registerListener( Cpu.class,       Operation.CREATED, new Listener<Cpu>() {
-			@Override public synchronized void onEvent( Cpu p ) { onPartCreated( p ); }
-		} );
-		m.registerListener( Gpu.class,       Operation.CREATED, new Listener<Gpu>() {
-			@Override public synchronized void onEvent( Gpu p ) { onPartCreated( p ); }
-		} );
-		m.registerListener( Mainboard.class, Operation.CREATED, new Listener<Mainboard>() {
-			@Override public synchronized void onEvent( Mainboard p ) { onPartCreated( p ); }
-		} );
-		m.registerListener( RamModule.class, Operation.CREATED, new Listener<RamModule>() {
-			@Override public synchronized void onEvent( RamModule p ) { onPartCreated( p ); }
-		} );
 	}
 
-	private synchronized void onPartCreated( Component c ) {
+	@Override
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	protected void registerListener() {
+		Listener l = this;
+		
+		mw.registerListener( Cpu.class, Operation.CREATED, l );
+		mw.registerListener( Gpu.class, Operation.CREATED, l );
+		mw.registerListener( Mainboard.class, Operation.CREATED, l );
+		mw.registerListener( RamModule.class, Operation.CREATED, l );
+	}
+
+	@Override
+	protected boolean process( Component p ) {
 		// try building for an order
-		for ( Input<PcSpec> order : mw.orders() ) {
+		for ( Input<PcSpec> order : mw.orderItems() ) {
 			mw.beginTransaction();
-			
+					
 			PcSpec spec = order.take();
-			
+					
 			if ( spec == null ) {
 				mw.rollbackTransaction();
 				continue;
 			}
-			
+					
 			Computer pc = buildPcForSpec( spec );
-		
+				
 			if ( pc == null ) {
 				mw.rollbackTransaction();
 			} else {
 				pcs.write( pc );
 				mw.commitTransaction();
 				log.info( "%s: Built PC %s for order %s", this, pc.id, spec.orderId );
-				return;
+				return true;
 			}
 		}
-		
+				
 		// if we get here no PC was built
-		
+				
 		mw.beginTransaction();
-		
+				
 		Computer pc = buildPc();
-		
+				
 		if ( pc == null ) {
 			mw.rollbackTransaction();
+			return false;
 		} else {
 			pcs.write( pc );
 			mw.commitTransaction();
 			log.info( "%s: Built PC %s", this, pc.id );
+			return true;
 		}
 	}
 	

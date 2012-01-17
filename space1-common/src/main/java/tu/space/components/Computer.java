@@ -62,24 +62,18 @@ public final class Computer extends Product {
 	/** COPY METHODS **/
 	// these methods create altered copy of a computer, remember they are immutable
 	
-	public Computer tagAsTestedForDefect( String testerId, TestStatus status ) {
-		assert defect == TestStatus.UNTESTED;
-		assert status != TestStatus.UNTESTED;
-		
+	public Computer tagAsTestedForDefect( String testerId ) {
 		return new Computer(
 			id, manufacturerId, orderId, testerId, completenessTesterId, logisticianId,
 			cpu, gpu, mainboard, ram,
-			status, complete, false
+			hasDefect() ? TestStatus.YES : TestStatus.NO, complete, false
 		);
 	}
-	public Computer tagAsTestedForCompleteness( String testerId, TestStatus status ) {
-		assert complete == TestStatus.UNTESTED;
-		assert status   != TestStatus.UNTESTED;
-		
+	public Computer tagAsTestedForCompleteness( String testerId ) {
 		return new Computer(
 			id, manufacturerId, orderId, defectTesterId, testerId, logisticianId, 
 			cpu, gpu, mainboard, ram,
-			defect, status, false
+			defect, isComplete() ? TestStatus.YES : TestStatus.NO, false
 		);
 	}
 	public Computer tagAsFinished( String logisticianId ) {

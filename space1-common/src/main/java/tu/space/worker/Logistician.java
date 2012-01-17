@@ -11,7 +11,7 @@ import tu.space.middleware.Middleware.Operation;
 import tu.space.middleware.OrderTracker;
 import tu.space.middleware.Output;
 
-public class Logistician extends Worker implements Listener<Order> {
+public class Logistician extends Processor<Computer> {
 	public Logistician( final String id, Middleware m ) {
 		super( id, m );
 		
@@ -19,75 +19,50 @@ public class Logistician extends Worker implements Listener<Order> {
 		storage = mw.getStorage();
 		trash   = mw.getTrash();
 		
-		new OrderTracker( m, this );
-		
-		// test on startup
-		while ( true ) {
-			mw.beginTransaction();
-			
-			Computer pc = pcIn.take();
-
-			if ( pc == null ) {
-				// hack, sometimes the selectors won't get it, try without and test by hand
-				pc = mw.getComputerInput().take();
-			}
-			
-			if ( pc == null || pc.defect == TestStatus.UNTESTED || pc.complete == TestStatus.UNTESTED ) {
-				mw.rollbackTransaction();
-				break;
-			}
-			
-			pc = pc.tagAsFinished( id );
-			
-			if ( pc.hasDefect() || !pc.isComplete() ) {
-				trash.write( pc );
-			} else {
-				storage.write( pc );
-			}
-			
-			mw.commitTransaction();
-		}
-		
-		// notifications
-		mw.registerListener( Computer.class, Operation.CREATED, new Listener<Computer>() {
+		new OrderTracker( m, new Listener<Order>() {
 			@Override
-			public synchronized void onEvent( Computer pc ) {
-				if ( pc.defect != TestStatus.UNTESTED && pc.complete != TestStatus.UNTESTED ) {
-					mw.beginTransaction();
-					
-					pc = pcIn.take();
-
-					if ( pc == null ) {
-						// hack, sometimes the selectors won't get it, try without and test by hand
-						pc = mw.getComputerInput().take();
-					}
-					
-					if ( pc == null || pc.defect == TestStatus.UNTESTED || pc.complete == TestStatus.UNTESTED ) {
-						mw.rollbackTransaction();
-						return;
-					}
-					
-					pc = pc.tagAsFinished( id );
-					
-					if ( pc.hasDefect() || !pc.isComplete() ) {
-						trash.write( pc );
-					} else {
-						storage.write( pc );
-					}
-					
-					mw.commitTransaction();
-				}
+			public void onEvent( Order p ) {
+				log.info( "%s: Order %s is done!", Logistician.this, p.id );
+				mw.signalOrderIsDone( p );
 			}
 		});
+	}
+	
+
+	@Override
+	protected boolean process( Computer p ) {
+		mw.beginTransaction();
+		
+		Computer pc = pcIn.take();
+
+		if ( pc == null ) {
+			// hack, sometimes the selectors won't get it, try without and test by hand
+			pc = mw.getComputerInput().take();
+		}
+		
+		if ( pc == null || pc.defect == TestStatus.UNTESTED || pc.complete == TestStatus.UNTESTED ) {
+			mw.rollbackTransaction();
+			return false;
+		}
+		
+		pc = pc.tagAsFinished( id );
+		
+		if ( pc.hasDefect() || !pc.isComplete() ) {
+			trash.write( pc );
+		} else {
+			storage.write( pc );
+		}
+		
+		mw.commitTransaction();
+		return true;
+	}
+
+	@Override
+	protected void registerListener() {
+		mw.registerTestedComputerListener( Operation.CREATED, this );
 	}
 	
 	private final Input<Computer>   pcIn;
 	private final Output<Computer>  storage;
 	private final Output<Product>   trash;
-
-	@Override
-	public synchronized void onEvent( Order p ) {
-		log.info( "%s: Order %s is done!", this, p.id );
-		mw.signalOrderIsDone( p );
-	}
 }

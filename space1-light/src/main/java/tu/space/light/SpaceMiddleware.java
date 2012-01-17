@@ -11,6 +11,7 @@ import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.mozartspaces.capi3.AnyCoordinator;
+import org.mozartspaces.capi3.AnyCoordinator.AnySelector;
 import org.mozartspaces.capi3.CoordinationData;
 import org.mozartspaces.capi3.CountNotMetException;
 import org.mozartspaces.capi3.FifoCoordinator;
@@ -75,6 +76,9 @@ public class SpaceMiddleware implements Middleware {
 			}			
 		};
 		
+		// read existing orders from space
+		this.orders = new CopyOnWriteArrayList<Order>( orders() );
+		
 		registerListener( Operation.CREATED, os, new Listener<Order>() {
 			@Override public synchronized void onEvent( Order o ) { 
 				orders.add( o );
@@ -133,8 +137,14 @@ public class SpaceMiddleware implements Middleware {
 	@Override 
 	public void registerOrderListener( Operation o, Listener<Order> l ) {
 		switch ( o ) {
-			case CREATED: orderCreatedListeners.add( l );
-			case REMOVED: orderRemovedListeners.add( l );
+			case CREATED: 
+				orderCreatedListeners.add( l );
+				// get all Order that already are in the space
+				for ( Order order : orders() ) l.onEvent( order );
+				break;
+			case REMOVED: 
+				orderRemovedListeners.add( l );
+				break;
 		}
 	}
 	
@@ -152,7 +162,42 @@ public class SpaceMiddleware implements Middleware {
 	public <P extends Product> void registerListener( Class<P> c, Operation o, Listener<P> l ) {
 		registerListener( o, crefs.getContainer( c ), l );		
 	}
+	
+	@Override
+	public void registerComputerListener( Operation o, Listener<Computer> l ) {
+		registerListener( o, crefs.getContainer( Computer.class ), l );		
+	}
 
+	@Override
+	public void registerListenerForComputersUntestedForDefect( Operation o, final Listener<Computer> l ) {
+		registerListener( o, crefs.getContainer( Computer.class ), new Listener<Computer>() {
+			@Override
+			public void onEvent( Computer p ) {
+				if ( p.defect == TestStatus.UNTESTED ) l.onEvent( p );
+			}
+		});
+	}
+
+	@Override
+	public void registerListenerForComputersUntestedForCompleteness( Operation o, final Listener<Computer> l ) {
+		registerListener( o, crefs.getContainer( Computer.class ), new Listener<Computer>() {
+			@Override
+			public void onEvent( Computer p ) {	
+				if ( p.complete == TestStatus.UNTESTED ) l.onEvent( p );
+			}
+		});
+	}
+
+	@Override
+	public void registerTestedComputerListener( Operation o, final Listener<Computer> l ) {
+		registerListener( o, crefs.getContainer( Computer.class ), new Listener<Computer>() {
+			@Override
+			public void onEvent( Computer p ) {
+				if ( p.defect != TestStatus.UNTESTED && p.complete != TestStatus.UNTESTED ) l.onEvent( p );
+			}
+		});
+	}
+	
 	@Override
 	public void setOrderItemListener( final OrderItemListener l ) {
 		orderItemListener = l;
@@ -194,7 +239,7 @@ public class SpaceMiddleware implements Middleware {
 	}
 	
 	@Override
-	public Iterable<Input<PcSpec>> orders() {
+	public Iterable<Input<PcSpec>> orderItems() {
 		return new Iterable<Input<PcSpec>>() {
 			@Override
 			public Iterator<Input<PcSpec>> iterator() {
@@ -237,6 +282,19 @@ public class SpaceMiddleware implements Middleware {
 		};
 	}
 
+	public List<Order> orders() {
+		try {
+			List<Serializable> l = capi.read( crefs.getOrders(), AnyCoordinator.newSelector( AnySelector.COUNT_MAX ), READ_TIMEOUT, tx );
+
+			List<Order> ps = new ArrayList<Order>( l.size() );
+			for ( Serializable s : l ) ps.add( (Order) entry2product( s ) );
+			
+			return ps;
+		} catch ( MzsCoreException e ) {
+			throw new SpaceException( e );
+		}	
+	}
+	
 	@Override
 	public Input<Computer> getComputerInput() {
 		return getInput( crefs.getPcs() );
@@ -581,7 +639,7 @@ public class SpaceMiddleware implements Middleware {
 	private final NotificationManager nm;
 	private final List<Notification>  ns = new ArrayList<Notification>();
 
-	private final List<Order>           orders                = new CopyOnWriteArrayList<Order>();
+	private final List<Order>           orders;
 	private final List<Listener<Order>> orderCreatedListeners = new Vector<Listener<Order>>();
 	private final List<Listener<Order>> orderRemovedListeners = new Vector<Listener<Order>>();
 	

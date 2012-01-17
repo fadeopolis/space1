@@ -6,7 +6,7 @@ import tu.space.utils.Starter;
 
 public class DarkStarter extends Starter {
 	@Override
-	protected Middleware makeMiddleware( int port ) {
-		return new JMSMiddleware( port );
+	protected Middleware makeMiddleware( String id, int port ) {
+		return new JMSMiddleware( id, port );
 	}
 }

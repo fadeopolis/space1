@@ -1,6 +1,9 @@
 package tu.space.dark.starters;
 
 import org.apache.activemq.broker.BrokerService;
+import org.apache.activemq.broker.region.policy.PolicyEntry;
+import org.apache.activemq.broker.region.policy.PolicyMap;
+import org.apache.activemq.command.ActiveMQQueue;
 
 import tu.space.utils.Logger;
 
@@ -17,6 +20,14 @@ public class StartDarkBroker extends DarkStarter {
 		broker.setBrokerName( "dark-server" );
 		broker.addConnector( "tcp://localhost:" + port );
 		broker.setDeleteAllMessagesOnStartup( true );
+
+		// enable advisory messages
+		PolicyMap   pm = new PolicyMap();
+		PolicyEntry pe = new PolicyEntry();
+		pe.setAdvisoryForConsumed( true );
+		pe.setAdvisoryForDelivery( true );
+		pm.put( new ActiveMQQueue(">"), pe );
+		broker.setDestinationPolicy( pm );
 		
 		broker.start();
 	}

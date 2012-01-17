@@ -6,7 +6,7 @@ import org.apache.log4j.PatternLayout;
 
 public class Logger {
 	public static void configure() {
-		configure( Level.WARN );
+		configure( Level.INFO );
 	}
 	public static void configure( Level level ) {
 		// configure log4j

@@ -23,11 +23,13 @@ public abstract class Starter {
 		log.info( "STARTING %s %s ON PORT %d", c.getSimpleName(), id, port );
 		
 		Constructor<?> cons = c.getConstructor( String.class, Middleware.class );
-		Middleware m = makeMiddleware( port );
+		Middleware m = makeMiddleware( id, port );
 		
 		// start worker
-		cons.newInstance( id, m );
+		Runnable r = (Runnable) cons.newInstance( id, m );
+		
+		r.run();
 	}
 	
-	protected abstract Middleware makeMiddleware( int port );
+	protected abstract Middleware makeMiddleware( String id, int port );
 }

@@ -14,7 +14,7 @@ public class LightStarter extends Starter {
 	}
 	
 	@Override
-	protected Middleware makeMiddleware( int port ) {
+	protected Middleware makeMiddleware( String id, int port ) {
 		return new SpaceMiddleware( port );
 	}
 }

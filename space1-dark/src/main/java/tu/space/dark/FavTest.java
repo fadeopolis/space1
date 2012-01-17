@@ -13,39 +13,33 @@ import javax.jms.QueueBrowser;
 import javax.jms.Session;
 import javax.jms.TextMessage;
 
-import org.apache.activemq.AdvisoryConsumer;
 import org.apache.activemq.advisory.AdvisorySupport;
-import org.apache.activemq.broker.BrokerFactory;
 import org.apache.activemq.broker.BrokerService;
 import org.apache.activemq.broker.region.policy.PolicyEntry;
 import org.apache.activemq.broker.region.policy.PolicyMap;
-import org.apache.activemq.command.ActiveMQDestination;
 import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.command.ActiveMQQueue;
-import org.apache.activemq.command.ActiveMQTopic;
-
 import tu.space.components.Cpu;
-import tu.space.jms.JMS;
+import tu.space.components.Product;
 import tu.space.utils.Logger;
 import tu.space.worker.Manufacturer;
 
 public class FavTest {
-	static final int port = 6666;
+	public static final int port = 6666;
 	
 	public static void main( String[] args ) throws Exception {
-
 		Logger.configure();
 		
-		BrokerService bs = startBroker();
+//		BrokerService bs = startBroker();
 		
-		doJMSStuff();
+//		doJMSStuff();
 
 //		waitForUserToPressEnter();
 		
-		bs.stop();
+//		bs.stop();
 //		
 //		doMiddlewareStuff();
-//		printQueue( "PcSpec", "orderId = '3181c6d0'" );
+		printQueue( "PcSpec", "orderId='a1a58d4b'" );
 	}
 	
 	static BrokerService startBroker() throws Exception {
@@ -68,46 +62,50 @@ public class FavTest {
 	}
 	
 	static void doJMSStuff() throws Exception {
-		final Connection c = JMS.openConnection( port );
+		final Connection c = JMS.openConnection( "foo", port );
 		final Session    s = JMS.createSession( c );
 		
 		c.start();
 
 		
-		final MessageProducer mp = s.createProducer( s.createQueue( "Cpu" ) );
-		final MessageConsumer mc = s.createConsumer( AdvisorySupport.getProducerAdvisoryTopic( new ActiveMQQueue( "Cpu" ) ) );
-		final MessageConsumer mc2 = s.createConsumer( AdvisorySupport.getMessageDeliveredAdvisoryTopic( new ActiveMQQueue( "Cpu" ) ) );
+		final MessageProducer mp = s.createProducer( JMS.getQueue( s, Cpu.class ) );
+		final MessageConsumer mc = s.createConsumer( AdvisorySupport.getMessageDeliveredAdvisoryTopic( new ActiveMQQueue( "Cpu" ) ) );
 
 		Message m = s.createTextMessage( "foo" );
 //		Message m = s.createObjectMessage( new Cpu( "62465ce3", "", false, null ) );
 		m.setBooleanProperty( "REMOVED", true );
+		m.setStringProperty( "foo", null );
 		
 		mp.send( m );
 		s.commit();
 		
-		ActiveMQMessage msg = (ActiveMQMessage) mc2.receive();
+		ActiveMQMessage msg = (ActiveMQMessage) mc.receive();
 		TextMessage     obj = (TextMessage) msg.getDataStructure();
 //		ObjectMessage   obj = (ObjectMessage) msg.getDataStructure();
 		s.commit();
 
-		print( msg.getContent() );
-		print( obj.getObjectProperty( "REMOVED" ) );
-		print( obj.getText() );
+//		print( msg.getContent() );
+		print( obj.getStringProperty( "foo" ) );
+//		print( obj.getText() );
 		
 		c.close();
 	}
 	
 	static void doMiddlewareStuff() {
-		new Manufacturer( "man1", new JMSMiddleware( port ) );
+		new Manufacturer( "man1", new JMSMiddleware( "man1", port ) );
 	}
 	
 	static void printQueue( String name, String selector ) throws JMSException {		
-		final Connection c = JMS.openConnection( port );
+		final Connection c = JMS.openConnection( "bar", port );
 		final Session    s = JMS.createSession( c );
 		
 		c.start();
 
+//		MessageConsumer mc = s.createConsumer( s.createQueue( name ) );
+//		print( mc.receiveNoWait() );
+		
 		QueueBrowser qb = s.createBrowser( s.createQueue( name ), selector );
+		Marshaller<Product> marsh = Marshaller.ByType;
 		
 		System.out.println( "Printing: " + name );
 		
@@ -115,8 +113,8 @@ public class FavTest {
 		@SuppressWarnings("unchecked")
 		Enumeration<ObjectMessage> e = qb.getEnumeration();
 		while ( e.hasMoreElements() ) {
-			ObjectMessage m = e.nextElement();
-			Object        o = m.getObject();
+			Message  m = e.nextElement();
+			Object   o = marsh.fromMessage( m );
 			
 			System.out.println( o.getClass().getSimpleName() + " " + o );
 			@SuppressWarnings("unchecked")

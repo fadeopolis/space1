@@ -54,6 +54,7 @@ final class SpaceContainers {
 		
 		return trash;
 	}
+	
 	public ContainerReference getCpus() {
 		if ( cpus == null ) cpus = getContainer( "Cpu", new AnyCoordinator(), new LabelCoordinator() );
 		
@@ -75,7 +76,7 @@ final class SpaceContainers {
 		return rams;
 	}
 	public ContainerReference getOrders() {
-		if ( orders == null ) orders = getContainer( "Order", new KeyCoordinator(), null );
+		if ( orders == null ) orders = getContainer( "Order", new AnyCoordinator(), new KeyCoordinator() );
 		
 		return orders;
 	}

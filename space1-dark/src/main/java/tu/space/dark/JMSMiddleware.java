@@ -1,10 +1,7 @@
 package tu.space.dark;
 
-import static tu.space.jms.JMS.CREATED_SELECTOR;
-import static tu.space.jms.JMS.IS_IN_ORDER_SELECTOR;
-import static tu.space.jms.JMS.REMOVED_SELECTOR;
-
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -15,7 +12,12 @@ import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.MessageConsumer;
 import javax.jms.ObjectMessage;
+import javax.jms.Queue;
+import javax.jms.QueueBrowser;
 import javax.jms.Session;
+import javax.jms.Topic;
+
+import org.apache.activemq.command.ActiveMQMessage;
 
 import tu.space.components.Computer;
 import tu.space.components.Cpu;
@@ -27,9 +29,6 @@ import tu.space.components.RamList;
 import tu.space.components.RamModule;
 import tu.space.contracts.Order;
 import tu.space.contracts.PcSpec;
-import tu.space.jms.JMS;
-import tu.space.jms.JMSReader;
-import tu.space.jms.JMSWriter;
 import tu.space.middleware.CpuInput;
 import tu.space.middleware.Input;
 import tu.space.middleware.Listener;
@@ -42,13 +41,15 @@ import tu.space.utils.SpaceException;
 
 public class JMSMiddleware implements Middleware {
 
-	public JMSMiddleware( int port ) {
+	public JMSMiddleware( String id, int port ) {
 		try {
-			connection = JMS.openConnection( port );
+			connection = JMS.openConnection( id, port );
 			session    = JMS.createSession( connection );
 			
-			orderOut  = JMS.getWriter( session, Order.class );
-			pcSpecOut = JMS.getWriter( session, PcSpec.class );
+			orderOut  = new JMSOutput<Order>( Order.class, session );
+			pcSpecOut = new JMSOutput<PcSpec>( PcSpec.class, session );
+			
+			orders = new CopyOnWriteArrayList<Order>( orders() );
 			
 			registerOrderListener( Operation.CREATED, new Listener<Order>() {
 				@Override
@@ -62,8 +63,6 @@ public class JMSMiddleware implements Middleware {
 					orders.remove( p );
 				}
 			});
-			
-			connection.start();
 		} catch ( JMSException e ) {
 			throw new SpaceException( e );
 		}
@@ -93,45 +92,53 @@ public class JMSMiddleware implements Middleware {
 
 	@Override
 	public void registerOrderListener( Operation o, Listener<Order> l ) {
-		registerListener( Order.class, op2selector( o ), l );
+		registerListener( Order.class, o, l );
 	}
 
 	@Override
 	public void registerStorageListener( Operation o, Listener<Computer> l ) {
-		registerListener( "Storage", op2selector( o ), l );
+		registerListener( Computer.class, JMS.getStorage( session ), o, null, l );
 	}
 
 	@Override
 	public void registerTrashListener( Operation o, Listener<Product> l ) {
-		registerListener( "Trash", op2selector( o ), l );
+		registerListener( Product.class, JMS.getTrash( session ), o, null, l );
 	}
 
-//	@Override
-//	public void registerComponentListener( Operation o, Listener<Component> l ) {
-//		
-//	}
-//	void registerComputerListener( Operation o, Listener<Computer> l );
+	@Override
+	public void registerComputerListener( Operation o, Listener<Computer> l ) {
+		registerListener( Computer.class, o, l );
+	}
 
-//	void registerListenerForComputersUntestedForDefect( Operation o, Listener<Computer> l );
-//	void registerListenerForComputersUntestedForCompleteness( Operation o, Listener<Computer> l );
-//	
-//	void registerTestedComputerListener( Operation o, Listener<Computer> l );
+	@Override
+	public void registerListenerForComputersUntestedForDefect( Operation o, Listener<Computer> l ) {
+		registerListener( Computer.class, o, UNTESTED_FOR_DEFECT_SELECTOR, l );
+	}
 
+	@Override
+	public void registerListenerForComputersUntestedForCompleteness( Operation o, Listener<Computer> l ) {
+		registerListener( Computer.class, o, UNTESTED_FOR_COMPLETENESS_SELECTOR, l );
+	}
+
+	@Override
+	public void registerTestedComputerListener( Operation o, Listener<Computer> l ) {
+		registerListener( Computer.class, o, TESTED_SELECTOR, l );
+	}
 	
 	@Override
 	public <P extends Product> void registerListener( Class<P> c, Operation o, Listener<P> l ) {
-		registerListener( c, op2selector( o ), l );
+		registerListener( c, o, null, l );
 	}
 
 	@Override
 	public void setOrderItemListener( final OrderItemListener l ) {
-		registerListener( "Storage", CREATED_SELECTOR + " AND " + IS_IN_ORDER_SELECTOR, new Listener<Computer>() {
+		registerListener( Computer.class, JMS.getStorage( session ), Operation.CREATED, IS_IN_ORDER_SELECTOR, new Listener<Computer>() {
 			@Override
 			public void onEvent( Computer p ) {
 				l.onOrderItemFinished( p.orderId );
 			}
 		});
-		registerListener( PcSpec.class, CREATED_SELECTOR , new Listener<PcSpec>() {
+		registerListener( PcSpec.class, Operation.CREATED, new Listener<PcSpec>() {
 			@Override
 			public void onEvent( PcSpec p ) {
 				if ( p.init() ) return;
@@ -139,7 +146,7 @@ public class JMSMiddleware implements Middleware {
 				l.onOrderItemDefect( p.orderId );
 			}			
 		});
-		registerListener( PcSpec.class, REMOVED_SELECTOR , new Listener<PcSpec>() {
+		registerListener( PcSpec.class, Operation.REMOVED, new Listener<PcSpec>() {
 			@Override
 			public void onEvent( PcSpec p ) {
 				l.onOrderItemProduced( p.orderId );
@@ -156,15 +163,11 @@ public class JMSMiddleware implements Middleware {
 
 	@Override
 	public void signalOrderIsDone( Order o ) {
-		try {
-			new JMSReader<Order>( Order.class, session, "orderId =" + o.id ).take();
-		} catch ( JMSException e ) {
-			throw new SpaceException();
-		}
+		getInput( Order.class, "orderId='" + o.id + "'" ).take();
 	}
 
 	@Override
-	public Iterable<Input<PcSpec>> orders() {
+	public Iterable<Input<PcSpec>> orderItems() {
 		return new Iterable<Input<PcSpec>>() {
 			@Override
 			public Iterator<Input<PcSpec>> iterator() {
@@ -184,11 +187,7 @@ public class JMSMiddleware implements Middleware {
 						Order out = o;
 						o = null;
 						
-						try {
-							return new JMSReader<PcSpec>( PcSpec.class, session, "orderId = '" + out.id + "'"  );
-						} catch ( JMSException e ) {
-							throw new SpaceException();
-						}
+						return getInput( PcSpec.class, "orderId='" + out.id + "'"  );
 					}
 
 					@Override
@@ -212,67 +211,84 @@ public class JMSMiddleware implements Middleware {
 	}
 
 	@Override
+	public List<Order> orders() {
+		try {
+			QueueBrowser      qb    = session.createBrowser( JMS.getQueue( session, Order.class ) );
+			Marshaller<Order> marsh = Marshaller.Order;
+			List<Order> os = new ArrayList<Order>();
+			
+			@SuppressWarnings("unchecked")
+			Enumeration<ObjectMessage> e = qb.getEnumeration();
+			while ( e.hasMoreElements() ) {
+				Message m = e.nextElement();
+
+				os.add( marsh.fromMessage( m ) );
+			}
+			
+			return os;
+		} catch ( JMSException e ) {
+			throw new SpaceException( e );
+		}
+	}	
+	
+	@Override
 	public Input<Computer> getComputerInput() {
-		return JMS.getPCReader( session );
+		return getInput( Computer.class, null );
 	}
 
 	@Override
 	public Input<Computer> getComputersUntestedForDefect() {
-		return JMS.getPCUntestedForDefectReader( session );
+		return getInput( Computer.class, UNTESTED_FOR_DEFECT_SELECTOR );
 	}
 
 	@Override
 	public Input<Computer> getComputersUntestedForCompleteness() {
-		return JMS.getPCUntestedForCompletenessReader( session );
+		return getInput( Computer.class, UNTESTED_FOR_COMPLETENESS_SELECTOR );
 	}
 
 	@Override
 	public Input<Computer> getTestedComputers() {
-		return JMS.getTestedPcReader( session );
+		return getInput( Computer.class, TESTED_SELECTOR );
 	}
 
 	@Override
 	public Output<Computer> getComputerOutput() {
-		return JMS.getPCWriter( session );
+		return new JMSOutput<Computer>( Computer.class, session );
 	}
 
 	@Override
 	public CpuInput getCpuInput() {
-		try {
-			return new CpuInput() {
-				@Override
-				public Cpu take() {
-					return any.take();
+		return new CpuInput() {
+			@Override
+			public Cpu take() {
+				return any.take();
+			}
+			
+			@Override
+			public Cpu take( Type type ) {
+				switch ( type ) {
+					case SINGLE_CORE: return single.take();
+					case DUAL_CORE:   return dual.take();
+					case QUAD_CORE:   return quad.take();
+					default: throw new SpaceException();
 				}
-				
-				@Override
-				public Cpu take( Type type ) {
-					switch ( type ) {
-						case SINGLE_CORE: return single.take();
-						case DUAL_CORE:   return dual.take();
-						case QUAD_CORE:   return quad.take();
-						default: throw new SpaceException();
-					}
-				}
-				
-				private final JMSReader<Cpu> any    = JMS.getCPUReader( session );
-				private final JMSReader<Cpu> single = new JMSReader<Cpu>( Cpu.class, session, "CPU = " + Cpu.Type.SINGLE_CORE.name() );
-				private final JMSReader<Cpu> dual   = new JMSReader<Cpu>( Cpu.class, session, "CPU = " + Cpu.Type.DUAL_CORE.name() );
-				private final JMSReader<Cpu> quad   = new JMSReader<Cpu>( Cpu.class, session, "CPU = " + Cpu.Type.QUAD_CORE.name() );
-			};
-		} catch ( JMSException e ) {
-			throw new SpaceException( e );
-		}
+			}
+			
+			private final JMSInput<Cpu> any    = getInput( Cpu.class, null );
+			private final JMSInput<Cpu> single = getInput( Cpu.class, "CPU='" + Cpu.Type.SINGLE_CORE.name() + "'" );
+			private final JMSInput<Cpu> dual   = getInput( Cpu.class, "CPU='" + Cpu.Type.DUAL_CORE.name()   + "'" );
+			private final JMSInput<Cpu> quad   = getInput( Cpu.class, "CPU='" + Cpu.Type.QUAD_CORE.name()   + "'" );
+		};
 	}
 
 	@Override
 	public Input<Gpu> getGpuInput() {
-		return JMS.getGPUReader( session );
+		return getInput( Gpu.class, null );
 	}
 
 	@Override
 	public Input<Mainboard> getMainboardInput() {
-		return JMS.getMainboardReader( session );
+		return getInput( Mainboard.class, null );
 	}
 
 	@Override
@@ -308,39 +324,39 @@ public class JMSMiddleware implements Middleware {
 				return new RamList( rams );
 			}
 			
-			private final JMSReader<RamModule> ramIn  = JMS.getRAMReader( session );
-			private final JMSWriter<RamModule> ramOut = JMS.getRAMWriter( session );
+			private final JMSInput<RamModule> ramIn   = getInput( RamModule.class, null );
+			private final JMSOutput<RamModule> ramOut = getOutput( RamModule.class, null );
 		};
 	}
 
 	@Override
 	public Output<Cpu> getCpuOutput() {
-		return JMS.getCPUWriter( session );
+		return new JMSOutput<Cpu>( Cpu.class, session );
 	}
 
 	@Override
 	public Output<Gpu> getGpuOutput() {
-		return JMS.getGPUWriter( session );
+		return getOutput( Gpu.class, null );
 	}
 
 	@Override
 	public Output<Mainboard> getMainboardOutput() {
-		return JMS.getMainboardWriter( session );
+		return getOutput( Mainboard.class, null );
 	}
 
 	@Override
 	public Output<RamModule> getRamOutput() {
-		return JMS.getRAMWriter( session );
+		return getOutput( RamModule.class, null );
 	}
 
 	@Override
 	public Output<Computer> getStorage() {
-		return JMS.getStorageWriter( session );
+		return new JMSOutput<Computer>( Computer.class, session, JMS.getStorage( session ) );
 	}
 
 	@Override
 	public Output<Product> getTrash() {
-		return JMS.getTrashWriter( session );
+		return new JMSOutput<Product>( Product.class, session, JMS.getTrash( session ) );
 	}
 
 	@Override
@@ -372,31 +388,36 @@ public class JMSMiddleware implements Middleware {
 	
 	//***** PRIVATE
 
-	private <P extends Product> void registerListener( Class<P> c, String selector, final Listener<P> l ) {
-		registerListener( c.getSimpleName(), selector, l );
+	private <P extends Product> void registerListener( Class<P> c, Operation o, String selector, final Listener<P> l ) {
+		registerListener( c, JMS.getQueue( session, c ), o, selector, l );
 	}
-	private <P extends Product> void registerListener( String topicName, String selector, final Listener<P> l ) {
+	private <P extends Product> void registerListener( final Class<P> c, Queue queue, Operation o, String selector, final Listener<P> l ) {
 		try {
 			final Session         s  = JMS.createSession( connection );
-			final MessageConsumer mc = s.createConsumer( s.createTopic( topicName ), selector );
+			final Topic           t  = JMS.getTopic( s, queue.getQueueName(), o );
+			final MessageConsumer mc = s.createConsumer( t, selector );
+			final Marshaller<P>   ma = Marshaller.forType( c );
 			
-			new Thread() {
+			new Thread( "Listener-" + queue.getQueueName() + "-" + o + "-[" + selector + "]" ) {
 				public void run() {
 					
 					while ( true ) {
 						try {
 							Message m = mc.receive();
 							
-							if ( m == null ) continue;
+							if ( m == null ) {
+								continue;
+							}
 							
-							// acknowledge recival of topic message
+							// acknowledge recieval of topic message
 							s.commit();
 							
 							try { sleep( 100 ); } catch ( InterruptedException e ) {}
 							
-							@SuppressWarnings("unchecked")
-							P p = (P) ((ObjectMessage) m).getObject();
-							l.onEvent( p );
+							ActiveMQMessage advisory = (ActiveMQMessage) m;
+							Message         msg      = (Message) advisory.getDataStructure();
+
+							l.onEvent( ma.fromMessage( msg ) );
 						} catch ( JMSException e ) {
 							log.error( e.toString() );
 							continue;
@@ -409,20 +430,31 @@ public class JMSMiddleware implements Middleware {
 		}
 	}
 	
-	private static String op2selector( Operation o ) {
-		switch ( o ) {
-			case CREATED: return CREATED_SELECTOR;
-			case REMOVED: return REMOVED_SELECTOR;
-			default:      throw new SpaceException();
+	<P extends Product> JMSInput<P> getInput( Class<P> c, String selector ) {
+		try {
+			return new JMSInput<P>( c, session, JMS.getQueue( session, c ), selector );
+		} catch ( JMSException e ) {
+			throw new SpaceException( e );
 		}
+	}
+	<P extends Product> JMSOutput<P> getOutput( Class<P> c, String selector ) {
+		return new JMSOutput<P>( c, session, JMS.getQueue( session, c ) );
 	}
 	
 	private final Connection connection;
 	private final Session    session;
-	private final JMSWriter<Order>  orderOut;
-	private final JMSWriter<PcSpec> pcSpecOut;
+	private final JMSOutput<Order>  orderOut;
+	private final JMSOutput<PcSpec> pcSpecOut;
 	
-	private final List<Order> orders = new CopyOnWriteArrayList<Order>();
+	private final List<Order> orders;
 	
-	private final Logger log = Logger.make( getClass() );	
+	private final Logger log = Logger.make( getClass() );
+	
+	public static final String TESTED_FOR_DEFECT       = "TESTED_FOR_DEFECT";
+	public static final String TESTED_FOR_COMPLETENESS = "TESTED_FOR_COMPLETENESS";
+	
+	private static final String IS_IN_ORDER_SELECTOR               = "(orderId IS NOT NULL)";
+	private static final String UNTESTED_FOR_DEFECT_SELECTOR       = "(TESTED_FOR_DEFECT        = false)";
+	private static final String UNTESTED_FOR_COMPLETENESS_SELECTOR = "(TESTED_FOR_COMPLETENESS  = false)";
+	private static final String TESTED_SELECTOR                    = "(TESTED_FOR_DEFECT = true) AND (TESTED_FOR_COMPLETENESS  = true)";
 }

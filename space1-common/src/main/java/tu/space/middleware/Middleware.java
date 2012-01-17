@@ -26,13 +26,12 @@ public interface Middleware {
 	void registerTrashListener( Operation o, Listener<Product> l );
 
 	// use this to find out when stuff is produced
-//	void registerComponentListener( Operation o, Listener<Component> l );
-//	void registerComputerListener( Operation o, Listener<Computer> l );
-//
-//	void registerListenerForComputersUntestedForDefect( Operation o, Listener<Computer> l );
-//	void registerListenerForComputersUntestedForCompleteness( Operation o, Listener<Computer> l );
-//	
-//	void registerTestedComputerListener( Operation o, Listener<Computer> l );
+	void registerComputerListener( Operation o, Listener<Computer> l );
+
+	void registerListenerForComputersUntestedForDefect( Operation o, Listener<Computer> l );
+	void registerListenerForComputersUntestedForCompleteness( Operation o, Listener<Computer> l );
+	
+	void registerTestedComputerListener( Operation o, Listener<Computer> l );
 	
 	<P extends Product> void registerListener( Class<P> c, Operation o, Listener<P> l );
 
@@ -42,7 +41,8 @@ public interface Middleware {
 	void signalPcForOrderDefect( Computer c );
 	void signalOrderIsDone( Order o );
 	
-	Iterable<Input<PcSpec>> orders();
+	Iterable<Input<PcSpec>> orderItems();
+	Iterable<Order>         orders();
 	
 	Input<Computer>  getComputerInput();
 	Input<Computer>  getComputersUntestedForDefect();
